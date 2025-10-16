@@ -11,7 +11,7 @@ import { pathFromPublicUrl } from "@/features/users/utils";
 import { axiosInstance } from "@/lib/axios";
 import { useAuth } from "@/stores/auth"; // donde tengas user + logout
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { FileImage, Loader2 } from "lucide-react";
 import { formatMessage } from "@/utils/formatters";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void };
@@ -40,7 +40,7 @@ export function ChangeAvatarDialog({ open, onOpenChange }: Props) {
       toast.success("Avatar actualizado. Vuelve a iniciar sesión.");
       onOpenChange(false);
       onOpenChange(false);                    // 👈 cierra el modal
-      setTimeout(() => logout(), 1500); 
+      setTimeout(() => logout(), 1500);
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? e?.message ?? "No se pudo actualizar el avatar");
     } finally {
@@ -52,9 +52,11 @@ export function ChangeAvatarDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-sm p-0">
         <DialogHeader className="px-5 pt-4 pb-2">
-          <DialogTitle className="text-base font-semibold">Cambiar avatar</DialogTitle>
-          <Separator/>
-          <DialogDescription className="text-sm-plus pt-4 justify-center">
+          <DialogTitle className="text-sm-plus font-semibold flex">
+            <FileImage className="w-4 h-4 mr-2" />Cambiar avatar
+          </DialogTitle>
+          <Separator className="mt-4 mb-4" />
+          <DialogDescription className="text-sm-plus  justify-center">
             Cambiar tu avatar de acceso
           </DialogDescription>
         </DialogHeader>
@@ -66,14 +68,14 @@ export function ChangeAvatarDialog({ open, onOpenChange }: Props) {
           />
         </div>
 
-        
+
         <DialogFooter className="px-5 py-3 bg-muted/40 border-t rounded-none">
           <DialogClose asChild>
-            <Button variant="ghost" className="h-11 rounded hover:bg-[#008C93] hover:text-white">Cancelar</Button>
+            <Button className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer" >Cancelar</Button>
           </DialogClose>
-          <Button onClick={onSave} 
-          disabled={saving || !tmpPath}
-          className="h-11 rounded hover:bg-[#008C93] hover:text-white">
+          <Button onClick={onSave}
+            disabled={saving || !tmpPath}
+            className="h-11 rounded  bg-[#008C93] hover:bg-[#007381] cursor-pointer">
             {saving ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="animate-spin" size={18} />

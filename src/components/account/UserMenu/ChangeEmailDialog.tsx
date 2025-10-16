@@ -55,9 +55,10 @@ export function ChangeEmailDialog({ open, onOpenChange, currentEmail }: Props) {
       <DialogContent className="sm:max-w-md rounded-sm p-0">
         {/* HEADER */}
         <DialogHeader className="px-5 pt-4 pb-2">
-          <DialogTitle className="text-base font-semibold">Editar email</DialogTitle>
-          <Separator />
-          <DialogDescription className="text-sm-plus pt-4">
+          <DialogTitle className="text-sm-plus font-semibold flex">
+            <Mail className="w-4 h-4 mr-2"/>Editar email</DialogTitle>
+          <Separator className="mt-4 mb-4"/>
+          <DialogDescription className="text-sm-plus  justify-center">
             Cambia tu email personal
           </DialogDescription>
 
@@ -81,7 +82,7 @@ export function ChangeEmailDialog({ open, onOpenChange, currentEmail }: Props) {
               placeholder="Ingresa tu nuevo email"
               value={values.email}
               onChange={(e) => setValues((s) => ({ ...s, email: e.target.value }))}
-              className={`h-10 ${emailError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+              className={`h-11 rounded ${emailError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
             />
             {emailError ? (
               <p className="text-xs text-red-600">El email no es válido</p>
@@ -97,7 +98,7 @@ export function ChangeEmailDialog({ open, onOpenChange, currentEmail }: Props) {
                 placeholder="Ingresa tu clave actual"
                 value={values.password}
                 onChange={(e) => setValues((s) => ({ ...s, password: e.target.value }))}
-                className="h-10 pr-10"
+                className="h-11 pr-10 rounded"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") onSubmit();
                 }}
@@ -118,13 +119,13 @@ export function ChangeEmailDialog({ open, onOpenChange, currentEmail }: Props) {
         {/* FOOTER gris con botones */}
         <DialogFooter className="px-5 py-3 bg-muted/40 border-t rounded-none">
           <DialogClose asChild>
-            <Button variant="ghost" className="h-10 rounded hover:bg-[#008C93] hover:text-white">
+            <Button className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer">
               Cancelar
             </Button>
           </DialogClose>
           <Button onClick={onSubmit}
             disabled={!canSave}
-            className="h-11 rounded hover:bg-[#008C93] hover:text-white">
+           className="h-11 rounded  bg-[#008C93] hover:bg-[#007381] cursor-pointer">
             {submitting ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="animate-spin" size={18} />

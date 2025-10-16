@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { changePassword } from "@/lib/api/account";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, KeyRoundIcon, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatMessage } from "@/utils/formatters";
 import { useAuth } from "@/stores/auth";
@@ -79,9 +79,9 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
       >
         {/* HEADER */}
         <DialogHeader className="px-5 pt-4 pb-2">
-          <DialogTitle className="text-base font-semibold">Editar clave</DialogTitle>
-          <Separator/>
-          <DialogDescription className="text-sm-plus pt-4 justify-center">
+          <DialogTitle className="text-sm-plus font-semibold flex"><KeyRoundIcon className="w-4 h-4 mr-2"/>Editar clave</DialogTitle>
+          <Separator className="mt-4 mb-4"/>
+          <DialogDescription className="text-sm-plus  justify-center">
             Cambia tu clave de acceso
           </DialogDescription>
         </DialogHeader>
@@ -119,11 +119,11 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
         {/* FOOTER (gris con borde arriba) */}
         <DialogFooter className="px-5 py-3 bg-muted/40 border-t rounded-none">
           <DialogClose asChild>
-            <Button variant="ghost" className="h-11 rounded hover:bg-[#008C93] hover:text-white">Cancelar</Button>
+            <Button className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer" >Cancelar</Button>
           </DialogClose>
           <Button onClick={onSubmit} 
           disabled={!canSave} 
-          className="h-11 rounded hover:bg-[#008C93] hover:text-white">
+          className="h-11 rounded  bg-[#008C93] hover:bg-[#007381] cursor-pointer" >
             {submitting ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="animate-spin" size={18} />
@@ -162,7 +162,7 @@ function PasswordField({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="pr-10 rounded-none mt-2"
+          className="pr-10 h-11 rounded-none mt-2"
           onKeyDown={(e) => {
             // permitir Enter para enviar
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();

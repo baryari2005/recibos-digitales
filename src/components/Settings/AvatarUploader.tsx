@@ -136,7 +136,7 @@ export function AvatarUploader({
             className="hidden"
             onChange={(e) => handleFile(e.target.files?.[0])}
           />
-          <Button type="button" variant="secondary" onClick={pick} disabled={uploading}>
+          <Button type="button" variant="secondary" className="h-11 rounded" onClick={pick} disabled={uploading}>
             {uploading ? "Subiendo…" : "Seleccionar imagen"}
           </Button>
         </div>
