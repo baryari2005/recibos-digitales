@@ -34,7 +34,7 @@ export function UserForm({
         onTempAvatarUploaded={setTmpPath}
       />
       <div className="md:col-span-2 mt-4 mb-4">
-        <Button type="submit" size="lg" className="w-full h-11 rounded bg-[#008C93] hover:bg-[#007381]" disabled={submitting}>
+        <Button type="submit" size="lg" className="w-full h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer" disabled={submitting}>
           {submitting ? (
             <span className="inline-flex items-center gap-2">
               <Loader2 className="animate-spin" size={18} />

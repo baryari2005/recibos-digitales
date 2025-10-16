@@ -19,7 +19,7 @@ export default function UsersPage() {
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="text-2xl flex items-center"><Users className="mr-2" />Usuarios</CardTitle>
             <Link href="/users/new">
-              <Button size="lg" className="w-full h-11 rounded bg-[#008C93] hover:bg-[#007381]">Nuevo usuario</Button>
+              <Button size="lg" className="w-full h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer">Nuevo usuario</Button>
             </Link>
           </CardHeader>
           <CardContent>

@@ -29,16 +29,14 @@ interface GenericListWithTableProps<T> {
   refreshToken?: any;
   clientData?: T[];
 
-  /** Mapeo de nombres de params hacia el backend */
   paramNames?: {
-    search?: string; // default: "search"
-    page?: string;   // default: "page"
-    limit?: string;  // default: "limit"
-    sortBy?: string; // default: "sortBy"
-    sortDir?: string; // default: "sortDir"
+    search?: string;
+    page?: string;
+    limit?: string;
+    sortBy?: string;
+    sortDir?: string;
   };
 
-  /** Adaptador de respuesta: convierte res.data en { items, total, pageCount? } */
   responseAdapter?: (raw: any) => { items: T[]; total: number; pageCount?: number };
 }
 
@@ -49,6 +47,20 @@ function useDebounce<T>(value: T, delay = 300) {
     return () => clearTimeout(id);
   }, [value, delay]);
   return debounced;
+}
+
+// Mantiene el spinner visible un mínimo para evitar “flicker”
+function useBusyDelay(busy: boolean, min = 200) {
+  const [vis, setVis] = useState(busy);
+  useEffect(() => {
+    if (busy) {
+      setVis(true);
+      return;
+    }
+    const t = setTimeout(() => setVis(false), min);
+    return () => clearTimeout(t);
+  }, [busy, min]);
+  return vis;
 }
 
 function stableStringify(obj: Record<string, any>) {
@@ -74,14 +86,14 @@ export function GenericListWithTable<T>({
   const [totalPages, setTotalPages] = useState(1);
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  // búsqueda con debounce (desde DataTable)
+  // búsqueda con debounce
   const [searchDraft, setSearchDraft] = useState(externalSearch);
   useEffect(() => setSearchDraft(externalSearch), [externalSearch]);
   const debouncedSearch = useDebounce(searchDraft, 350);
+  const isDebouncing = searchDraft !== debouncedSearch; // 👈 NUEVO
 
-  const activeSort = sorting[0]; // puede ser undefined
+  const activeSort = sorting[0];
 
-  // nombres de params (memorizados)
   const pn = useMemo(() => ({
     search: "search",
     page: "page",
@@ -91,7 +103,6 @@ export function GenericListWithTable<T>({
     ...(paramNames ?? {}),
   }), [paramNames]);
 
-  // construir params (objeto) y una key estable para deps
   const params = useMemo(() => {
     const base: Record<string, any> = {
       [pn.page]: page,
@@ -111,10 +122,9 @@ export function GenericListWithTable<T>({
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
     }
-    return sp.toString(); // clave estable
+    return sp.toString();
   }, [stableStringify(params)]);
 
-  // evita doble fetch por StrictMode en dev en el primer render
   const didInit = useRef(false);
 
   const fetchData = useCallback(async (signal: AbortSignal) => {
@@ -167,38 +177,39 @@ export function GenericListWithTable<T>({
     }
   }, [clientData, endpoint, requestKey, pageSize, responseAdapter]);
 
-  // reset a página 1 cuando cambia search externo
+  // reset a página 1 cuando cambia search externo (y muestra loading)
   useEffect(() => {
     setPage(1);
+    setLoading(true); // 👈 feedback inmediato si externalSearch cambia
   }, [externalSearch]);
 
   useEffect(() => {
-    // En dev, el primer render en StrictMode hace doble mount.
-    // Permitimos que dispare normalmente, pero al cambiar requestKey será intencional.
     if (process.env.NODE_ENV !== "production") {
       if (!didInit.current) {
         didInit.current = true;
       }
     }
-
     const ctrl = new AbortController();
     fetchData(ctrl.signal);
     return () => ctrl.abort();
-    // deps SOLO endpoint + requestKey + refreshToken + fetchData
   }, [endpoint, requestKey, refreshToken, fetchData]);
+
+  // Loading para UI: muestra mientras tipeás (debounce) o mientras hay request
+  const uiLoading = useBusyDelay(loading || isDebouncing, 200); // 👈 NUEVO
 
   return (
     <div className="mt-4 space-y-4">
       <DataTableComponent
         columns={columns}
         data={data}
-        loading={loading}
+        loading={uiLoading}                    // 👈 ANTES: loading
         page={page}
         totalPages={totalPages}
         onPageChange={(newPage) => setPage(newPage)}
         onSearchChange={(val) => {
           setSearchDraft(val);
           setPage(1);
+          setLoading(true);                    // 👈 feedback instantáneo al teclear
         }}
         sorting={sorting}
         onSortingChange={(updater) =>

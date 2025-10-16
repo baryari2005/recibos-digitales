@@ -236,7 +236,7 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
       <div className="md:col-span-2">
         <Button
           type="submit"
-          className="w-full h-11 rounded bg-[#008C93] hover:bg-[#007381]"
+          className="w-full h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer"
           disabled={isSubmitting}
         >
           {isSubmitting ? (

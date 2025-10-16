@@ -16,13 +16,13 @@ type Props = {
   height?: "compact" | "normal" | "tall";
   size?: "sm" | "md" | "lg";
   showClock?: boolean;
-  /** Si lo pasás, se usa este ícono sí o sí (p. ej. Clock7) */
   clockIcon?: LucideIcon;
-  /** Si true, ignora el ícono genérico y usa Clock1..Clock12 según la hora */
   dynamicClockByHour?: boolean;
-  timeZone?: string;      // ej: "America/Argentina/Buenos_Aires"
-  withSeconds?: boolean;  // reloj con segundos
+  timeZone?: string;
+  withSeconds?: boolean;
   artImgClassName?: string;
+  /** Fondo detrás de la ilustración (cambia en hover) */
+  artWrapperClassName?: string;
 };
 
 const HEIGHTS = {
@@ -42,20 +42,17 @@ const CLOCK_BY_HOUR: Record<number, LucideIcon> = {
   7: Clock7, 8: Clock8, 9: Clock9, 10: Clock10, 11: Clock11, 12: Clock12,
 };
 
+function getHour24(date: Date, timeZone?: string) {
+  return Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone }).format(date)
+  );
+}
 function computeGreeting(date: Date, tz?: string) {
   const hour = getHour24(date, tz);
   if (hour >= 5 && hour < 12) return "Buenos días";
   if (hour >= 12 && hour < 19) return "Buenas tardes";
   return "Buenas noches";
 }
-
-function getHour24(date: Date, timeZone?: string) {
-  // usamos Intl para respetar la zona horaria
-  return Number(
-    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone }).format(date)
-  );
-}
-
 function formatTime(date: Date, tz?: string, withSeconds?: boolean) {
   return new Intl.DateTimeFormat("es-AR", {
     hour: "2-digit",
@@ -77,7 +74,8 @@ export function WelcomeBanner({
   dynamicClockByHour = false,
   timeZone = "America/Argentina/Buenos_Aires",
   withSeconds = false,
-  artImgClassName
+  artImgClassName,
+  artWrapperClassName,
 }: Props) {
   const h = HEIGHTS[height];
   const s = SIZES[size];
@@ -92,16 +90,25 @@ export function WelcomeBanner({
   const gText = greeting ?? computeGreeting(now, timeZone);
   const timeText = formatTime(now, timeZone, withSeconds);
 
-  // elegir ícono:
   const hour24 = getHour24(now, timeZone);
-  const hour12 = (hour24 % 12) || 12;           // 0 → 12
+  const hour12 = (hour24 % 12) || 12;
   const AutoIcon = CLOCK_BY_HOUR[hour12];
   const FinalIcon = clockIcon ?? (dynamicClockByHour ? AutoIcon : Clock);
 
   return (
     <section className={className}>
-      <div className={`relative ${h} ${s.radius} overflow-hidden border bg-gradient-to-r from-indigo-50 to-indigo-100/60 text-indigo-950`}>
+      {/* group para poder usar group-hover en hijos */}
+      <div
+        //</section>className={`group relative ${h} ${s.radius} overflow-hidden border bg-gradient-to-r from-indigo-50 to-indigo-100/60 text-indigo-950        `}
+        // 👉 si querés que cambie TODO el banner en hover, descomenta lo de abajo:
+        //className={`group relative ${h} ${s.radius} overflow-hidden border text-indigo-950 bg-gradient-to-r from-indigo-50 to-indigo-100/60 hover:from-indigo-100 hover:to-indigo-200`}
+        className={`group relative ${h} ${s.radius} overflow-hidden border text-indigo-950 transition-colors duration-300
+                    bg-[linear-gradient(135deg,_#F2F9F9_0%,_#99D1D3_45%,_#008C93_100%)]
+                    hover:bg-[linear-gradient(135deg,_#EAF6F7_0%,_#8CC8CB_45%,_#00777C_100%)]
+                  `}
+      >
         <div className="grid h-full grid-cols-[1fr_auto] items-center">
+          {/* Texto */}
           <div className={`${s.pad} pr-4`}>
             <p className="text-xl text-indigo-900/70">
               Hola <span className="font-semibold text-indigo-950">{name}</span>,
@@ -119,12 +126,15 @@ export function WelcomeBanner({
             </h2>
           </div>
 
+          {/* Arte: SIN márgenes/padding extras para no cambiar el tamaño */}
           <div className="h-full pr-0 flex items-end justify-end">
-            <img
-              alt="Illustration"
-              src="/welcome.png"
-              className={`${s.artImg} w-auto pointer-events-none select-none ${artImgClassName ?? ""}`}
-            />
+            <div>
+              <img
+                alt="Illustration"
+                src="/welcome.png"
+                className={`${s.artImg} w-auto pointer-events-none select-none ${artImgClassName ?? ""}`}
+              />
+            </div>
           </div>
         </div>
       </div>

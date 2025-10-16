@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from "lucide-react";
 
 export type DataTableProps<T> = {
   data: T[];
@@ -58,8 +58,15 @@ export function GenericDataTable<T>({
           <Input
             placeholder={searchPlaceholder}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-11 rounded border pl-9 pr-10" // ojo al padding izquierdo
+            className="h-11 rounded border pl-9 pr-10"
+            aria-busy={loading}
           />
+          {loading && (
+            <Loader2
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none"
+              aria-label="Buscando…"
+            />
+          )}
         </div>
       </div>
 
@@ -95,9 +102,16 @@ export function GenericDataTable<T>({
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="p-3 flex items-center text-muted-foreground" colSpan={columns.length}><Loader2 className="w-4 h-4 mr-4 animate-spin"/>Cargando…</td></tr>
+              <tr>
+                <td className="p-3 flex items-center text-muted-foreground" colSpan={columns.length}>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cargando…
+                </td>
+              </tr>
             ) : data.length === 0 ? (
-              <tr><td className="p-3" colSpan={columns.length}>Sin resultados</td></tr>
+              <tr>
+                <td className="p-3" colSpan={columns.length}>Sin resultados</td>
+              </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="border-t">
@@ -116,10 +130,19 @@ export function GenericDataTable<T>({
       <div className="flex items-center justify-between mt-1 text-sm">
         <div>Página {page} de {totalPages}</div>
         <div className="flex items-center gap-2">
-          <Button  className="h-11 rounded bg-[#008C93] hover:bg-[#007381]" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page <= 1 || loading}>
+          <Button
+            className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer"
+            size="sm"
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            disabled={page <= 1 || loading}
+          >
             Anterior
           </Button>
-          <Button  className="h-11 rounded  bg-[#008C93] hover:bg-[#007381]" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages || loading}>
+          <Button
+            className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer"
+            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages || loading}
+          >
             Siguiente
           </Button>
         </div>

@@ -40,7 +40,11 @@ export function QuoteBanner({
   return (
     <section className={className}>
       <div
-        className={`relative ${h} ${s.radius} overflow-hidden border bg-gradient-to-r from-slate-100 to-slate-50 text-slate-900`}
+        //className={`relative ${h} ${s.radius} overflow-hidden border bg-gradient-to-r from-slate-100 to-slate-50 text-slate-900`}
+        className={`group relative ${h} ${s.radius} overflow-hidden border text-indigo-950 transition-colors duration-300
+                    bg-[linear-gradient(135deg,_#F2F9F9_0%,_#99D1D3_45%,_#008C93_100%)]
+                    hover:bg-[linear-gradient(135deg,_#EAF6F7_0%,_#8CC8CB_45%,_#00777C_100%)]
+                  `}
       >
         <div className="grid h-full grid-cols-[1fr_auto] items-center">
           <div className={`${s.pad} pr-4`}>
