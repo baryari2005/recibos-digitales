@@ -1,0 +1,101 @@
+// import { NextRequest, NextResponse } from "next/server";
+// import { prisma } from "@/lib/db";
+// import { requireAdmin } from "@/lib/authz";
+// import { z } from "zod";
+
+// export const runtime = "nodejs";
+// export const dynamic = "force-dynamic";
+
+// // zod server-side según tu LegajoForm (nombres en inglés)
+// const legajoSchema = z.object({
+//   employeeNumber: z.number().int().positive().optional().nullable(),
+//   documentType: z.enum(["DNI", "PAS", "LE", "LC", "CI"]).optional().nullable(),
+//   documentNumber: z.string().optional().nullable(),
+//   cuil: z.string().optional().nullable(),
+//   admissionDate: z.string().optional().nullable(),   // yyyy-mm-dd
+//   terminationDate: z.string().optional().nullable(), // yyyy-mm-dd
+//   employmentStatus: z.enum(["ACTIVO", "SUSPENDIDO", "LICENCIA", "BAJA"]),
+//   contractType: z.enum(["INDETERMINADO", "PLAZO_FIJO", "TEMPORAL", "PASANTIA", "MONOTRIBUTO"]).optional().nullable(),
+//   position: z.string().optional().nullable(),
+//   area: z.string().optional().nullable(),
+//   department: z.string().optional().nullable(),
+//   category: z.string().optional().nullable(),
+//   notes: z.string().optional().nullable(),
+// });
+
+// function dateOrNull(s?: string | null) {
+//   if (!s) return null;
+//   const d = new Date(s);
+//   return isNaN(d.getTime()) ? null : d;
+// }
+
+// export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+//   // admin only
+//   const resUser = await prisma.usuario.findUnique({ where: { id: params.id } });
+//   if (!resUser || resUser.deletedAt) {
+//     return NextResponse.json({ message: "Usuario no encontrado" }, { status: 404 });
+//   }
+
+//   const f = await prisma.legajo.findUnique({ where: { usuarioId: params.id } });
+//   if (!f) return NextResponse.json(null); // UI ya maneja default
+
+//   return NextResponse.json({
+//     employeeNumber: f.numeroLegajo ?? null,
+//     documentType: f.tipoDocumento ?? null,
+//     documentNumber: f.documento ?? null,
+//     cuil: f.cuil ?? null,
+//     admissionDate: f.fechaIngreso ? f.fechaIngreso.toISOString() : null,
+//     terminationDate: f.fechaEgreso ? f.fechaEgreso.toISOString() : null,
+//     employmentStatus: f.estadoLaboral,
+//     contractType: f.tipoContrato ?? null,
+//     position: f.puesto ?? null,
+//     area: f.area ?? null,
+//     department: f.departamento ?? null,
+//     category: f.categoria ?? null,
+//     notes: f.observaciones ?? null,
+//   });
+// }
+
+// export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+//   const auth = await requireAdmin(req);
+//   if (!auth.ok) return auth.res;
+
+//   try {
+//     const body = await req.json();
+//     const dto = legajoSchema.parse(body);
+
+//     // asegurar usuario
+//     const user = await prisma.usuario.findUnique({ where: { id: params.id } });
+//     if (!user || user.deletedAt) {
+//       return NextResponse.json({ message: "Usuario no encontrado" }, { status: 404 });
+//     }
+
+//     const data = {
+//       usuarioId: params.id,
+//       numeroLegajo: dto.employeeNumber ?? null,
+//       tipoDocumento: dto.documentType ?? null,
+//       documento: dto.documentNumber ?? null,
+//       cuil: dto.cuil ?? null,
+//       fechaIngreso: dateOrNull(dto.admissionDate),
+//       fechaEgreso: dateOrNull(dto.terminationDate),
+//       estadoLaboral: dto.employmentStatus,
+//       tipoContrato: dto.contractType ?? null,
+//       puesto: dto.position ?? null,
+//       area: dto.area ?? null,
+//       departamento: dto.department ?? null,
+//       categoria: dto.category ?? null,
+//       observaciones: dto.notes ?? null,
+//     };
+
+//     const saved = await prisma.legajo.upsert({
+//       where: { usuarioId: params.id },
+//       update: data,
+//       create: data,
+//     });
+
+//     return NextResponse.json({ ok: true, id: saved.id });
+//   } catch (e: any) {
+//     const msg = e?.issues?.map((i: any) => i.message).join(", ") || e?.message || "Bad Request";
+//     return NextResponse.json({ message: msg }, { status: 400 });
+//   }
+// }

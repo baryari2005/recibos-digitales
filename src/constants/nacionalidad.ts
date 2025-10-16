@@ -1,0 +1,52 @@
+export const NACIONALIDAD_VALUES = [
+  "ARGENTINA",
+  "BRASIL",
+  "URUGUAY",
+  "PARAGUAY",
+  "CHILE",
+  "BOLIVIA",
+  "PERU",
+  "ECUADOR",
+  "COLOMBIA",
+  "VENEZUELA",
+
+  "MEXICO",
+  "GUATEMALA",
+  "EL_SALVADOR",
+  "HONDURAS",
+  "NICARAGUA",
+  "COSTA_RICA",
+  "PANAMA",
+  "CUBA",
+  "REPUBLICA_DOMINICANA",
+
+  "ESPANA",
+  "ITALIA",
+  "FRANCIA",
+  "ALEMANIA",
+  "REINO_UNIDO",
+  "PORTUGAL",
+
+  "ESTADOS_UNIDOS",
+  "CANADA",
+
+  "CHINA",
+  "JAPON",
+  "COREA_DEL_SUR",
+  "INDIA",
+  "RUSIA",
+  "UCRANIA",
+
+  "MARRUECOS",
+  "NIGERIA",
+  "SUDAFRICA",
+  "ARGELIA",
+  "SENEGAL",
+
+  "TURQUIA",
+  "ISRAEL",
+  "AUSTRALIA",
+  "NUEVA_ZELANDA",
+] as const;
+
+export type Nacionalidad = typeof NACIONALIDAD_VALUES[number];

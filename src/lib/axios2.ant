@@ -1,0 +1,241 @@
+// // // src/lib/axios.ts
+// // import axios from "axios";
+
+// // const baseURL =
+// //   // Si definiste el backend directo (p.ej. "http://localhost:3001/api"), úsalo:
+// //   process.env.NEXT_PUBLIC_API_BASE && process.env.NEXT_PUBLIC_API_BASE.trim().length > 0
+// //     ? process.env.NEXT_PUBLIC_API_BASE
+// //     // Si NO hay env, usamos el proxy de Next en /api (configura rewrites si corresponde):
+// //     : "/api";
+
+// // export const axiosInstance = axios.create({
+// //   baseURL,
+// //   withCredentials: true, // no molesta; útil si en algún momento usás cookies
+// // });
+
+// // // === REQUEST: adjunta Authorization si hay token en LS ===
+// // // axiosInstance.interceptors.request.use((config) => {
+// // //   if (typeof window !== "undefined") {
+// // //     const t = localStorage.getItem("token");
+// // //     if (t) {
+// // //       config.headers = config.headers ?? {};
+// // //       (config.headers as any).Authorization = `Bearer ${t}`;
+// // //     }
+// // //   }
+// // //   return config;
+// // // });
+
+// // axiosInstance.interceptors.request.use((config) => {
+// //   const base = (config.baseURL ?? '').replace(/\/$/, '');
+// //   const path = (config.url ?? '').startsWith('/') ? config.url : `/${config.url ?? ''}`;
+// //   const full = `${base}${path}`;
+
+// //   // Si hay params planos, loguearlos:
+// //   let qs = '';
+// //   if (config.params && typeof config.params === 'object') {
+// //     try {
+// //       qs = `?${new URLSearchParams(config.params as any).toString()}`;
+// //     } catch {}
+// //   }
+
+// //   console.log('[AXIOS][REQUEST]', full + qs, {
+// //     method: config.method,
+// //     headers: config.headers,
+// //   });
+
+// //   return config;
+// // });
+
+// // // util para detectar el endpoint de login, sin importar si baseURL termina con /api o no
+// // function isLoginCall(url = "") {
+// //   try {
+// //     // url puede venir relativa ("/auth/login") o absoluta; normalizamos
+// //     const u = url.startsWith("http") ? new URL(url) : new URL(url, "http://x");
+// //     return u.pathname.endsWith("/auth/login");
+// //   } catch {
+// //     return url.endsWith("/auth/login");
+// //   }
+// // }
+
+// // // === RESPONSE: manejo de 401 sin loops ===
+// // axiosInstance.interceptors.response.use(
+// //   (res) => res,
+// //   (err) => {
+// //     const status = err?.response?.status;
+// //     const reqUrl: string = err?.config?.url || "";
+// //     if (typeof window !== "undefined") {
+// //       const here = window.location.pathname + window.location.search;
+// //       const isOnLogin = window.location.pathname === "/login";
+// //       const loginCall = isLoginCall(reqUrl);
+
+// //       // Solo redirigí en 401 si NO es el login y NO estás en /login
+// //       if (status === 401 && !isOnLogin && !loginCall) {
+// //         const next = encodeURIComponent(here);
+// //         const dest = `/login?next=${next}`;
+// //         if (here !== dest) {
+// //           window.location.replace(dest); // evita loops
+// //         }
+// //         return new Promise(() => {}); // corta la promesa
+// //       }
+// //     }
+// //     return Promise.reject(err);
+// //   }
+// // );
+
+
+// // src/lib/axios.ts
+// import axios, { AxiosRequestConfig } from "axios";
+
+
+// type AxiosRequestConfigExt = AxiosRequestConfig & { skipAuthRedirect?: boolean };
+
+// /**
+//  * Base URL:
+//  * - Si definiste NEXT_PUBLIC_API_BASE (p.ej. "http://localhost:4000"), se usa eso.
+//  * - Si no, se usa "/api" (asegurate de tener rewrites en next.config.js).
+//  */
+// const baseURL =
+//   process.env.NEXT_PUBLIC_API_BASE && process.env.NEXT_PUBLIC_API_BASE.trim().length > 0
+//     ? process.env.NEXT_PUBLIC_API_BASE
+//     : "/api";
+
+// export const axiosInstance = axios.create({
+//   baseURL,
+//   withCredentials: true, // útil si usás cookies en otro momento
+// });
+
+// /** ----------------------------------------------------------------
+//  *  Autenticación: token en memoria + LS + defaults
+//  * ---------------------------------------------------------------- */
+// let inMemoryToken: string | null = null;
+
+// /** Única fuente de verdad para establecer/limpiar el token */
+// export function setAuthToken(token: string | null) {
+//   inMemoryToken = token;
+
+//   // Persistencia en LS (en cliente)
+//   if (typeof window !== "undefined") {
+//     if (token) localStorage.setItem("token", token);
+//     else localStorage.removeItem("token");
+//   }
+
+//   // Defaults del instance (cubre requests inmediatos)
+//   if (token) {
+//     axiosInstance.defaults.headers.common.Authorization = `Bearer ${token}`;
+//   } else {
+//     delete axiosInstance.defaults.headers.common.Authorization;
+//   }
+// }
+
+// // Al cargar en cliente, recuperamos token previo si existe
+// if (typeof window !== "undefined") {
+//   const t = localStorage.getItem("token");
+//   if (t) setAuthToken(t);
+// }
+
+// /** ----------------------------------------------------------------
+//  *  Helpers de logging y detección de endpoints
+//  * ---------------------------------------------------------------- */
+// function maskAuthHeader(headers: any) {
+//   if (!headers) return headers;
+//   const clone = { ...headers };
+//   const authKey = Object.keys(clone).find((k) => k.toLowerCase() === "authorization");
+//   if (authKey && typeof clone[authKey] === "string") {
+//     clone[authKey] = "Bearer ***"; // enmascara en logs
+//   }
+//   return clone;
+// }
+
+// function buildFullUrl(config: AxiosRequestConfig) {
+//   const url = config.url ?? "";
+//   // si ya es absoluta, no pegues baseURL
+//   if (/^https?:\/\//i.test(url)) return url;
+
+//   const base = (config.baseURL ?? "").replace(/\/$/, "");
+//   const path = url.startsWith("/") ? url : `/${url}`;
+//   return `${base}${path}`;
+// }
+
+// // Detecta si la request es /auth/login (soporta relativa o absoluta)
+// function isLoginCall(url = "") {
+//   try {
+//     const u = url.startsWith("http") ? new URL(url) : new URL(url, "http://x");
+//     return u.pathname.endsWith("/auth/login");
+//   } catch {
+//     return url.endsWith("/auth/login");
+//   }
+// }
+
+// /** ----------------------------------------------------------------
+//  *  Interceptor REQUEST: agrega Authorization y loguea
+//  * ---------------------------------------------------------------- */
+// axiosInstance.interceptors.request.use((config) => {
+//   // Adjunta Authorization desde memoria (fallback a LS si hiciera falta)
+//   const token = inMemoryToken ?? (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+//   if (token) {
+//     config.headers = config.headers ?? {};
+//     (config.headers as any).Authorization = `Bearer ${token}`;
+//   }
+
+//   // Log amigable (sin exponer token)
+//   const full = buildFullUrl(config);
+//   let qs = "";
+//   if (config.params && typeof config.params === "object") {
+//     try {
+//       qs = `?${new URLSearchParams(config.params as any).toString()}`;
+//     } catch {}
+//   }
+//   console.log("[AXIOS][REQUEST]", full + qs, {
+//     method: config.method,
+//     headers: maskAuthHeader(config.headers),
+//   });
+
+//   return config;
+// });
+
+// /** ----------------------------------------------------------------
+//  *  Interceptor RESPONSE: manejo centralizado de 401 sin loops
+//  * ---------------------------------------------------------------- */
+// axiosInstance.interceptors.response.use(
+//   (res) => res,
+//   (err) => {
+//     const status = err?.response?.status;
+//     const cfg = (err?.config ?? {}) as AxiosRequestConfigExt;
+//     const reqUrl: string = cfg?.url || "";
+
+//     // ⚠️ Si la request pidió saltar la redirección por 401, respetar.
+//     if (cfg?.skipAuthRedirect) {
+//       return Promise.reject(err);
+//     }
+
+//     if (typeof window !== "undefined") {
+//       const isOnLogin = window.location.pathname === "/login";
+//       const loginCall = isLoginCall(reqUrl);
+
+//       // Redirigir a /login SOLO si es 401, no estoy en /login y no era el login endpoint
+//       if (status === 401 && !isOnLogin && !loginCall) {
+//         const here = window.location.pathname + window.location.search;
+//         const next = encodeURIComponent(here);
+//         const dest = `/login?next=${next}`;
+
+//         if (window.location.href !== dest) {
+//           window.location.replace(dest);
+//         }
+//         // Corto la promesa para evitar cadenas de reintentos
+//         return new Promise(() => {});
+//       }
+//     }
+
+//     return Promise.reject(err);
+//   }
+// );
+
+// /** ----------------------------------------------------------------
+//  *  (Opcional) Axios para uso en server (rutas / server actions)
+//  *  Evita leer localStorage y usar "/api" que podría proxyearte a vos mismo.
+//  * ---------------------------------------------------------------- */
+// // export function createServerAxios(absoluteBaseUrl: string, token?: string) {
+// //   const instance = axios.create({ baseURL: absoluteBaseUrl, withCredentials: true });
+// //   if (token) instance.defaults.headers.common.Authorization = `Bearer ${token}`;
+// //   return instance;
+// // }

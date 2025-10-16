@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+enum Genero {
+  MASCULINO
+  FEMENINO
+  NO_BINARIO
+  PREFIERE_NO_DECIR
+  OTRO
+}
+
+enum EstadoCivil {
+  SOLTERO
+  CASADO
+  DIVORCIADO
+  VIUDO
+  UNION_CONVIVENCIAL
+  OTRO
+}
+
+enum Nacionalidad {
+  ARGENTINA @map("Argentina")
+  BRASIL    @map("Brasil")
+  URUGUAY   @map("Uruguay")
+  PARAGUAY  @map("Paraguay")
+  CHILE     @map("Chile")
+  BOLIVIA   @map("Bolivia")
+  PERU      @map("Perú")
+  ECUADOR   @map("Ecuador")
+  COLOMBIA  @map("Colombia")
+  VENEZUELA @map("Venezuela")
+
+  MEXICO               @map("México")
+  GUATEMALA            @map("Guatemala")
+  EL_SALVADOR          @map("El Salvador")
+  HONDURAS             @map("Honduras")
+  NICARAGUA            @map("Nicaragua")
+  COSTA_RICA           @map("Costa Rica")
+  PANAMA               @map("Panamá")
+  CUBA                 @map("Cuba")
+  REPUBLICA_DOMINICANA @map("República Dominicana")
+
+  ESPANA      @map("España")
+  ITALIA      @map("Italia")
+  FRANCIA     @map("Francia")
+  ALEMANIA    @map("Alemania")
+  REINO_UNIDO @map("Reino Unido")
+  PORTUGAL    @map("Portugal")
+
+  ESTADOS_UNIDOS @map("Estados Unidos")
+  CANADA         @map("Canadá")
+
+  CHINA         @map("China")
+  JAPON         @map("Japón")
+  COREA_DEL_SUR @map("Corea del Sur")
+  INDIA         @map("India")
+  RUSIA         @map("Rusia")
+  UCRANIA       @map("Ucrania")
+
+  MARRUECOS @map("Marruecos")
+  NIGERIA   @map("Nigeria")
+  SUDAFRICA @map("Sudáfrica")
+  ARGELIA   @map("Argelia")
+  SENEGAL   @map("Senegal")
+
+  TURQUIA       @map("Turquía")
+  ISRAEL        @map("Israel")
+  AUSTRALIA     @map("Australia")
+  NUEVA_ZELANDA @map("Nueva Zelanda")
+}
+
+enum TipoTelefono {
+  MOVIL
+  FIJO
+  LABORAL
+  OTRO
+}
+
+enum TipoContrato {
+  INDETERMINADO
+  PLAZO_FIJO
+  TEMPORAL
+  PASANTIA
+  MONOTRIBUTO
+}
+
+enum EstadoLaboral {
+  ACTIVO
+  SUSPENDIDO
+  LICENCIA
+  BAJA
+}
+
+enum TipoDocumento {
+  DNI
+  PAS
+  LE
+  LC
+  CI
+}
+
+model Usuario {
+  id                 String        @id @default(uuid())
+  userId             String        @unique
+  email              String        @unique
+  password           String
+  mustChangePassword Boolean       @default(false)
+  nombre             String?
+  apellido           String?
+  avatarUrl          String?
+  fechaNacimiento    DateTime?
+  genero             Genero?
+  estadoCivil        EstadoCivil?
+  nacionalidad       Nacionalidad?
+
+  deletedAt DateTime?
+
+  legajo Legajo?
+
+  rolId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rol Rol @relation(fields: [rolId], references: [id])
+
+  @@index([rolId])
+  @@index([apellido, nombre])
+}
+
+model Legajo {
+  id            String         @id @default(uuid())
+  usuarioId     String         @unique
+  numeroLegajo  Int?           @unique
+  tipoDocumento TipoDocumento? @default(DNI)
+  documento     String?        @unique
+  cuil          String?        @unique
+  fechaIngreso  DateTime?
+  fechaEgreso   DateTime?
+  estadoLaboral EstadoLaboral  @default(ACTIVO)
+  tipoContrato  TipoContrato?
+  puesto        String?
+  area          String?
+  departamento  String?
+  categoria     String?
+  observaciones String?
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([estadoLaboral])
+  @@index([area, departamento])
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
