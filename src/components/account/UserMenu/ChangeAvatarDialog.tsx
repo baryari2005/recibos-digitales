@@ -8,11 +8,11 @@ import { toast } from "sonner";
 import { AvatarUploader } from "@/components/Settings/AvatarUploader";
 import { useAvatarStaging } from "@/features/users/hooks/useAvatarStaging";
 import { pathFromPublicUrl } from "@/features/users/utils";
-import { axiosInstance } from "@/lib/axios";
 import { useAuth } from "@/stores/auth"; // donde tengas user + logout
 import { Separator } from "@/components/ui/separator";
 import { FileImage, Loader2 } from "lucide-react";
 import { formatMessage } from "@/utils/formatters";
+import { changeMyAvatar, changePassword } from "@/lib/api/account";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void };
 
@@ -34,8 +34,9 @@ export function ChangeAvatarDialog({ open, onOpenChange }: Props) {
       // mueve de avatars/tmp/... a avatars/users/<id>.<ext> y devuelve { key, publicUrl }
       const r = await commit(`users/${user!.id}`, oldKey);
 
+      const res = await changeMyAvatar({ avatarUrl: r.publicUrl });
       // guarda en tu usuario logueado
-      await axiosInstance.post("/auth/change-avatar", { avatarUrl: r.publicUrl });
+      //await axiosInstance.post("/auth/change-avatar", { avatarUrl: r.publicUrl });
 
       toast.success("Avatar actualizado. Vuelve a iniciar sesión.");
       onOpenChange(false);

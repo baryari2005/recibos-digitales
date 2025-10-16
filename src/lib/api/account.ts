@@ -17,11 +17,12 @@ export async function changeEmail(payload: { email: string; password: string }) 
   return data;
 }
 
-export async function changeMyAvatar(avatarUrl: string) {
-  const { data } = await axiosInstance.patch("/auth/change-avatar", { avatarUrl }, {
-    withCredentials: true,
-    skipAuthRedirect: true as any, // opcional pero recomendado
-  });
+export async function changeMyAvatar(payload: { avatarUrl: string }) {
+  const { data } = await axiosInstance.post(
+    "/auth/change-avatar",
+    payload,                    // 👈 directo, no { payload }
+    { withCredentials: true, skipAuthRedirect: true as any }
+  );
   return data;
 }
 

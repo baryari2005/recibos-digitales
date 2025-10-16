@@ -1,9 +1,12 @@
 "use client";
 
+import { axiosInstance } from "@/lib/axios";
+import { useAuth } from "@/stores/auth";
 import { useState } from "react";
 
 export function useAvatarStaging() {
   const [tmpPath, setTmpPath] = useState<string | null>(null);
+  const { token } = useAuth();
 
   // Este lo debería usar tu <AvatarUploader /> para subir temporal
   async function uploadTemp(file: File) {
@@ -21,22 +24,14 @@ export function useAvatarStaging() {
   // Mueve de tmp -> finalPrefix y borra la tmp. Devuelve publicUrl.
   async function commit(finalPrefix: string, oldPath?: string | null) {
     if (!tmpPath) throw new Error("No hay tmpPath para commitear.");
-
-    const res = await fetch("/api/uploads/avatar/commit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tmpPath, finalPrefix, oldPath: oldPath || null }),
-    });
-
-    // Log completo si falla
-    if (!res.ok) {
-      let body: any = null;
-      try { body = await res.json(); } catch {}
-      console.error("[avatar commit] failed", res.status, body);
-      throw new Error(body?.error || `Commit failed (${res.status})`);
-    }
-
-    const data = await res.json(); // { publicUrl, path }
+    const { data } = await axiosInstance.post(
+      "/uploads/avatar/commit",
+      { tmpPath, finalPrefix, oldPath: oldPath ?? null },
+      {
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    );
     setTmpPath(null);
     return data as { publicUrl: string; path: string };
   }
