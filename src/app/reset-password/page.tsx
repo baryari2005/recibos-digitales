@@ -1,12 +1,15 @@
-"use client";
+import type { Metadata } from "next";
+import { ResetPasswordGate } from "@/components/auth/ResetPasswordGate"; // asumimos export nombrado
 
-import { ResetPasswordGate } from "@/components/auth/ResetPasswordGate";
-import { useSearchParams } from "next/navigation";
+export const metadata: Metadata = { title: "Restablecer contraseña" };
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
+type SP = Promise<Record<string, string | string[] | undefined>>;
 
-export default function ResetPasswordPage() {
-  const sp = useSearchParams();
-  const token = sp.get("token") || "";
-
+export default async function Page({ searchParams }: { searchParams?: SP }) {
+  const sp = (await searchParams) ?? {};
+  const raw = sp.token;
+  const token = Array.isArray(raw) ? raw[0] : raw ?? "";
   return <ResetPasswordGate token={token} />;
 }

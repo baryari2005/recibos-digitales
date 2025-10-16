@@ -25,17 +25,16 @@ type ForgotPasswordDialogProps = {
 
 export function ForgotPasswordDialog(props: ForgotPasswordDialogProps) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null; 
-
-  const { triggerText = "¿Olvidó su contraseña?", onSent, openControlled, onOpenChangeControlled } = props;
   const [openUncontrolled, setOpenUncontrolled] = useState(false);
-
-  const open = openControlled ?? openUncontrolled;
-  const setOpen = onOpenChangeControlled ?? setOpenUncontrolled;
-
+  useEffect(() => setMounted(true), []);
   const emailId = useId();
 
+  
+  const { triggerText = "¿Olvidó su contraseña?", onSent, openControlled, onOpenChangeControlled } = props;
+  
+  const open = openControlled ?? openUncontrolled;
+  const setOpen = onOpenChangeControlled ?? setOpenUncontrolled;
+  
   const {
     register,
     handleSubmit,
@@ -46,7 +45,7 @@ export function ForgotPasswordDialog(props: ForgotPasswordDialogProps) {
     mode: "onChange",
     defaultValues: { email: "" },
   });
-
+  
   const onSubmit = async (values: ForgotPasswordValues) => {
     try {
       await requestPasswordReset(values.email);
@@ -60,6 +59,8 @@ export function ForgotPasswordDialog(props: ForgotPasswordDialogProps) {
       toast.error("No se pudo procesar la solicitud. Intentá nuevamente en unos minutos.");
     }
   };
+  
+  if (!mounted) return null; 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
