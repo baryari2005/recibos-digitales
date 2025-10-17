@@ -329,7 +329,7 @@ export default function ImportUsersPage() {
           <div className="flex items-center gap-3">
             <Label className="text-sm">Fuente:</Label>
 
-            <div className="inline-flex h-11 rounded-md overflow-hidden border border-black">
+            <div className="inline-flex h-11 rounded-md overflow-hidden border ">
               <Button
                 type="button"
                 variant="ghost"

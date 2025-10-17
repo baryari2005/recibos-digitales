@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
     const user = email
       ? await UsersRepo.findByEmail(email)
       : userId
-      ? await UsersRepo.findByUserId(userId)
-      : null;
+        ? await UsersRepo.findByUserId(userId)
+        : null;
 
     // Responder 200 siempre (no filtrar existencia)
     if (!user) return NextResponse.json({ ok: true });
@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     await sendPasswordReset(user.email, resetLink, user.nombre ?? undefined);
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.log(e);
     // no filtramos info
     return NextResponse.json({ ok: true });
   }
