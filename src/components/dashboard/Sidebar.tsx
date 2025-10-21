@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, ClipboardList, FileSignature, FileText, HelpCircle, Home, Import, Menu, Shield, UserRoundCog, Users,
@@ -23,6 +23,7 @@ type NavIconProps = {
   btnClassName?: string;
   disabled?: boolean;           // 👈 nuevo
   disabledHint?: string;        // 👈 opcional
+  onClick?: () => void;
 };
 
 function NavIcon({
@@ -34,6 +35,7 @@ function NavIcon({
   iconSize = 28,
   btnClassName,
   disabled = false,
+  onClick,
   disabledHint = "Funcionalidad no implementada",
 }: NavIconProps) {
   const clsActive = active ? "bg-white/15" : "";
@@ -53,6 +55,7 @@ function NavIcon({
       size="icon"
       variant="ghost"
       disabled={disabled}                                // 👈 deshabilita estilos/aria
+      onClick={onClick}
       aria-disabled={disabled || undefined}
       title={disabled ? disabledHint : title}
       className={[
@@ -78,7 +81,7 @@ type SidebarProps = {
 
 export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
-
+  const router = useRouter();
 
   useEffect(() => {
     console.log("[Sidebar] user recibido:", user);
@@ -95,10 +98,23 @@ export function Sidebar({ user }: SidebarProps) {
 
   return (
     <aside className="h-screen sticky top-0 bg-[#008C93] text-white flex flex-col items-center py-5 gap-4 w-[var(--sidebar-w)] shrink-0">
-      <NavIcon Icon={Menu} title="Menú" btnSize={BTN} iconSize={ICO} disabled/>
+      <NavIcon Icon={Menu} title="Menú" btnSize={BTN} iconSize={ICO} disabled />
       <Separator className="my-2 bg-white/20 w-10" />
       <NavIcon Icon={Home} href="/" title="Inicio" active={pathname === "/"} btnSize={BTN} iconSize={ICO} />
-      <NavIcon Icon={FileSignature} href="/receipts" title="Documentos" btnSize={BTN} iconSize={ICO} />
+      <NavIcon
+        Icon={FileSignature}
+        title="Documentos"
+        active={pathname.startsWith("/receipts")}
+        btnSize={BTN}
+        iconSize={ICO}
+        onClick={() => {
+          if (pathname.startsWith("/receipts")) {
+            router.push(`/receipts?v=${Date.now()}`); // 👈 fuerza “cambio” de ruta
+          } else {
+            router.push("/receipts");
+          }
+        }}
+      />
       <NavIcon Icon={ClipboardList} title="Vacaciones" btnSize={BTN} iconSize={ICO} disabled
         disabledHint="Funcionalidad no implementada" />
 

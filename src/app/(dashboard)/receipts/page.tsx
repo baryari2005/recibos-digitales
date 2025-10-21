@@ -1,125 +1,71 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { HelpCircle } from "lucide-react";
-import { toast } from "sonner";
-import { usePdfViewer } from "@/components/receipts/hooks/usePdfViewer";
-import { ReceiptsSidebar } from "@/components/receipts/ReceiptsSidebar";
-import { ViewerToolbar } from "@/components/receipts/ViewerToolbar";
-import { PdfViewer } from "@/components/receipts/PdfViewer";
-import { DocItem } from "@/components/receipts/types";
-import { axiosInstance } from "@/lib/axios";
+import { useSearchParams } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { FileSignature } from "lucide-react";
 
+import { useReceipts } from "@/features/receipts/hooks/useReceipts";
+import { ReceiptsTabs } from "@/features/receipts/components/ReceiptsTabs";
+import { ReceiptsList } from "@/features/receipts/components/ReceiptsList";
+import { ReceiptViewer } from "@/features/receipts/components/ReceiptViewer";
 
+export default function MisDocumentosPage() {
+  const searchParams = useSearchParams();
+  const refreshQP = searchParams.get("v");
 
-export default function MisRecibos() {
-  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [tab, setTab] = useState<"pendientes" | "firmados">("pendientes");
-  const [docs, setDocs] = useState<DocItem[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const { scale, fitMode, fullscreen, zoomIn, zoomOut, resetFit, enterFs, exitFs } = usePdfViewer();
-
-  const selected = useMemo(() => docs.find(d => d.id === selectedId) || null, [docs, selectedId]);
-
-  const viewerSrc = useMemo(() => {
-    if (!selected?.url) return null;
-    const params = new URLSearchParams({ toolbar: "0", navpanes: "0", statusbar: "0" });
-    const base = selected.url;
-    const hash = fitMode === "fitH" ? `view=FitH&${params.toString()}` : `zoom=${Math.round(scale * 100)}&${params.toString()}`;
-    return `${base}#${hash}`;
-  }, [selected?.url, fitMode, scale]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const { data } = await axiosInstance.get("/payroll/my-doc", { params: { period } });
-      // si llegó aquí, el status es 2xx; validamos que venga la URL
-      if (!data?.url) {
-        throw new Error(data?.error || "No se encontró el recibo para tu CUIL.");
-      }
-
-      const item: DocItem = {
-        id: `recibo-${period}`,
-        title: "RECIBOS-MENSUAL",
-        period,
-        status: "PENDIENTE",
-        url: data.url,
-      };
-
-      setDocs([item]);
-      setSelectedId(item.id);
-      resetFit();
-    } catch (err: any) {
-      // Axios trae info útil en err.response
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        "No se pudo obtener el documento.";
-
-      // Podés loguear paths probados si vienen:
-      if (err?.response?.data?.tried) {
-        console.debug("[my-doc tried paths]", err.response.data.tried);
-      }
-
-      setDocs([]);
-      setSelectedId(null);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); /* al montar */ }, []); // eslint-disable-line
-  const onBuscar = () => { resetFit(); load(); };
-
-  const onFirmarNoConforme = () => toast.info("Se registró tu firma no conforme (demo).");
-  const onConsultarRRHH = () => toast.message("RR.HH. recibirá tu consulta (demo).");
-  const onFirmar = () => toast.success("Documento firmado (demo).");
+  const {
+    data, tab, setTab,
+    selected, setSelected,
+    list, loading, signing,
+    handleSign,
+  } = useReceipts(refreshQP);
 
   return (
-    <div className="grid grid-cols-12 gap-4 p-4">
-      <ReceiptsSidebar
-        period={period} setPeriod={setPeriod}
-        tab={tab} setTab={setTab}
-        loading={loading}
-        docs={docs}
-        selectedId={selectedId}
-        onBuscar={onBuscar}
-        onSelect={setSelectedId}
-      />
+    <div className="grid gap-6">
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle className="text-2xl flex items-center">
+            <FileSignature className="mr-2" /> Mis Documentos
+          </CardTitle>
+        </CardHeader>
 
-      <div className="col-span-9">
-        <Card className="mb-3">
-          <CardContent className="p-3">
-            <ViewerToolbar
-              viewerSrc={viewerSrc}
-              fitMode={fitMode}
-              scale={scale}
-              onResetFit={resetFit}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
-              onEnterFs={enterFs}
-              onFirmar={onFirmar}
-              onFirmarNoConforme={onFirmarNoConforme}
-              onConsultarRRHH={onConsultarRRHH}
-            />
-          </CardContent>
-        </Card>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+            {/* Columna izquierda */}
+            <Card className="h-[calc(100vh-120px)] overflow-hidden">
+              <CardContent className="p-0 h-full flex flex-col">
+                <div className="-mx-0 px-3 mb-2 h-11">
+                  <ReceiptsTabs
+                    tab={tab}
+                    setTab={setTab}
+                    pendingCount={data?.pending.length ?? 0}
+                    signedCount={data?.signed.length ?? 0}
+                  />
+                </div>
+                <Separator />
+                <ReceiptsList
+                  list={list}
+                  loading={loading}
+                  selectedId={selected?.id ?? null}
+                  onSelect={setSelected}
+                />
+              </CardContent>
+            </Card>
 
-        <PdfViewer viewerSrc={viewerSrc} fullscreen={fullscreen} onExitFullscreen={exitFs} />
-
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <HelpCircle className="h-3.5 w-3.5" />
-          Si el visor no carga,{" "}
-          <a className="underline" href={selected?.url || "#"} target="_blank" rel="noreferrer">
-            abre el PDF en una pestaña nueva
-          </a>.
-        </div>
-      </div>
+            {/* Columna derecha */}
+            <Card className="h-[calc(100vh-120px)] overflow-hidden">
+              <CardContent className="p-0 h-full flex flex-col">
+                <ReceiptViewer
+                  selected={selected}
+                  signing={signing}
+                  onSign={handleSign}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

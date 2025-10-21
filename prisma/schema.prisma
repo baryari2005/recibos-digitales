@@ -176,3 +176,21 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
 }
+
+model PayrollReceipt {
+  id                     String   @id @default(cuid())
+  cuil                   String
+  period                 String   // ej: "08-2025"
+  periodDate             DateTime // ej: 2025-08-01 00:00:00Z (primer día del mes)
+  filePath               String   // p.ej: "docs/payroll/2025-08/20-23177200-7.pdf"
+  fileUrl                String   // p.ej: "https://.../storage/v1/object/public/docs/payroll/2025-08/20-23177200-7.pdf"
+  signed                Boolean  @default(false)
+  signedDisagreement Boolean  @default(false)
+  observations          String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([cuil, period])           // 1 recibo por cuil+periodo
+  @@index([cuil, periodDate])
+  @@map("payroll_receipts")          // nombre real de la tabla en DB
+}
