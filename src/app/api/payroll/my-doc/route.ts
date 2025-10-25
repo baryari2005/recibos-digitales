@@ -16,9 +16,7 @@ export async function GET(req: NextRequest) {
   const userId = me?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // CUIL desde Legajo o desde el usuario
-  const legajo = await prisma.legajo.findUnique({ where: { usuarioId: userId } });
-  const rawCuil = legajo?.cuil || (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
+  const rawCuil = (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
   if (!rawCuil) {
     return NextResponse.json({ error: "CUIL no configurado en tu perfil." }, { status: 400 });
   }

@@ -107,26 +107,34 @@ enum TipoDocumento {
 }
 
 model Usuario {
-  id                 String        @id @default(uuid())
-  userId             String        @unique
-  email              String        @unique
-  password           String
-  mustChangePassword Boolean       @default(false)
-  nombre             String?
-  apellido           String?
-  avatarUrl          String?
-  fechaNacimiento    DateTime?
-  genero             Genero?
-  estadoCivil        EstadoCivil?
-  nacionalidad       Nacionalidad?
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  tipoDocumento TipoDocumento? @default(DNI)
+  documento     String?        @unique
+  cuil          String?        @unique
+  email         String         @unique
+  celular       String?
+  domicilio     String?
+  codigoPostal  String?
 
-  deletedAt DateTime?
+  nombre          String?
+  apellido        String?
+  avatarUrl       String?
+  fechaNacimiento DateTime?
+  genero          Genero?
+  estadoCivil     EstadoCivil?
+  nacionalidad    Nacionalidad?
+
+  password           String
+  mustChangePassword Boolean @default(false)
+
+  rolId Int
 
   legajo Legajo?
 
-  rolId     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   rol Rol @relation(fields: [rolId], references: [id])
 
@@ -135,21 +143,20 @@ model Usuario {
 }
 
 model Legajo {
-  id            String         @id @default(uuid())
-  usuarioId     String         @unique
-  numeroLegajo  Int?           @unique
-  tipoDocumento TipoDocumento? @default(DNI)
-  documento     String?        @unique
-  cuil          String?        @unique
-  fechaIngreso  DateTime?
-  fechaEgreso   DateTime?
-  estadoLaboral EstadoLaboral  @default(ACTIVO)
-  tipoContrato  TipoContrato?
-  puesto        String?
-  area          String?
-  departamento  String?
-  categoria     String?
-  observaciones String?
+  id                  String        @id @default(uuid())
+  usuarioId           String        @unique
+  numeroLegajo        Int?          @unique
+  fechaIngreso        DateTime?
+  fechaEgreso         DateTime?
+  estadoLaboral       EstadoLaboral @default(ACTIVO)
+  tipoContrato        TipoContrato?
+  puesto              String?
+  area                String?
+  departamento        String?
+  categoria           String?
+  matriculaProvincial String?
+  matriculaNacional   String?
+  observaciones       String?
 
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
   createdAt DateTime @default(now())
@@ -178,19 +185,19 @@ model PasswordResetToken {
 }
 
 model PayrollReceipt {
-  id                     String   @id @default(cuid())
-  cuil                   String
-  period                 String   // ej: "08-2025"
-  periodDate             DateTime // ej: 2025-08-01 00:00:00Z (primer día del mes)
-  filePath               String   // p.ej: "docs/payroll/2025-08/20-23177200-7.pdf"
-  fileUrl                String   // p.ej: "https://.../storage/v1/object/public/docs/payroll/2025-08/20-23177200-7.pdf"
-  signed                Boolean  @default(false)
+  id                 String   @id @default(cuid())
+  cuil               String
+  period             String // ej: "08-2025"
+  periodDate         DateTime // ej: 2025-08-01 00:00:00Z (primer día del mes)
+  filePath           String // p.ej: "docs/payroll/2025-08/20-23177200-7.pdf"
+  fileUrl            String // p.ej: "https://.../storage/v1/object/public/docs/payroll/2025-08/20-23177200-7.pdf"
+  signed             Boolean  @default(false)
   signedDisagreement Boolean  @default(false)
-  observations          String?  @db.Text
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  observations       String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  @@unique([cuil, period])           // 1 recibo por cuil+periodo
+  @@unique([cuil, period]) // 1 recibo por cuil+periodo
   @@index([cuil, periodDate])
-  @@map("payroll_receipts")          // nombre real de la tabla en DB
+  @@map("payroll_receipts") // nombre real de la tabla en DB
 }

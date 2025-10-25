@@ -9,13 +9,12 @@ import { Loader2 } from "lucide-react";
 type Mode = "render" | "redirect";
 
 export function RoleGate({
-  allow = ["admin"],
+  allowIds = [2], // 👈 IDs de rol permitidos (por ej. 2 = ADMIN)
   mode = "render",
-  // 👇 fallback por defecto: spinner centrado
   fallback = <CenteredSpinner label="Verificando permisos…" />,
   children,
 }: {
-  allow?: string[];
+  allowIds?: number[];
   mode?: Mode;
   fallback?: React.ReactNode;
   children: React.ReactNode;
@@ -24,9 +23,11 @@ export function RoleGate({
   const router = useRouter();
 
   const allowed = useMemo(() => {
-    const role = user?.rol?.nombre?.toLowerCase();
-    return role ? allow.map((a) => a.toLowerCase()).includes(role) : false;
-  }, [user, allow]);
+    const roleId = user?.rol?.id ?? null;
+    // Debug para verificar qué llega
+    console.log(`RoleGate -> roleId=${roleId} allowIds=[${allowIds.join(", ")}]`);
+    return roleId !== null && allowIds.includes(roleId);
+  }, [user, allowIds]);
 
   useEffect(() => {
     if (mode === "redirect" && !loading && !allowed) {

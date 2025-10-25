@@ -23,7 +23,8 @@ export function CalendarPanel() {
 
   const days = useCalendarDays(month);
 
-  const { holidaySet, holidayByDate, loading: loadingHol, error: errHol } = useMonthHolidays(month, "AR");
+  const { holidaySet, holidayByDate, sets, loading: loadingHol, error: errHol } =  useMonthHolidays(month, "AR");
+//  const { holidaySet, holidayByDate, loading: loadingHol, error: errHol } = useMonthHolidays(month, "AR");
   const { birthdaySet, birthdaysByDate, loading: loadingBday, error: errBday } =
     useMonthBirthdays(month);
 
@@ -60,9 +61,9 @@ export function CalendarPanel() {
           {/*  Centro: "Eventos — OCTUBRE 2025"  */}
           <div className="flex-1 min-w-0 flex items-center justify-center gap-2 whitespace-nowrap">
             <span className="font-semibold">Eventos</span>
-            <span><Ellipsis className="h-4 w-4"/> </span>
+            <span><Ellipsis className="h-4 w-4" /> </span>
             <span className="text-xl font-semibold">
-              {format(month, "LLLL yyyy", { locale: es }).toUpperCase()}              
+              {format(month, "LLLL yyyy", { locale: es }).toUpperCase()}
             </span>
             <span><CalendarDays className="h-4 w-4" /></span>
             {loadingHol && (
@@ -72,8 +73,8 @@ export function CalendarPanel() {
           </div>
 
           {/*  Icono calendario + >  */}
-          <div className="flex items-center gap-2 shrink-0">            
-            
+          <div className="flex items-center gap-2 shrink-0">
+
             <Button
               size="icon"
               variant="ghost"
@@ -93,6 +94,7 @@ export function CalendarPanel() {
           days={days}
           month={month}
           holidaySet={holidaySet}
+          holidaySets={sets}
           birthdaySet={birthdaySet}
           onDayClick={(d) => {
             setSelected(d);
@@ -101,7 +103,9 @@ export function CalendarPanel() {
         />
 
         <div className="flex items-center gap-4 mt-4 text-xs">
-          <LegendDot className="bg-red-600" label="Feriado" />
+          <LegendDot className="bg-red-600" label="Feriado inamovible" />
+          <LegendDot className="bg-amber-500" label="Trasladable (laborable)" />
+          <LegendDot className="bg-purple-600" label="Puente (no laborable)" />
           <LegendDot className="bg-green-600" label="Cumpleaños" />
         </div>
       </CardContent>

@@ -35,7 +35,7 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
       };
     }
 
-    if (roleName !== "admin") {
+    if (roleName !== "admin" && roleName != "administrador") {
       return {
         ok: false,
         res: NextResponse.json(

@@ -1,10 +1,16 @@
+// /src/app/api/users/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { EstadoCivil, Genero, Prisma } from "@prisma/client";              // 👈 importa tipos de Prisma
-
+import {
+  EstadoCivil,
+  Genero,
+  Nacionalidad,
+  TipoDocumento,
+  Prisma,
+} from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,19 +19,29 @@ const createUserSchema = z.object({
   userId: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
+  rolId: z.number().int().positive(),
+
+  // Personales / contacto
   nombre: z.string().optional().nullable(),
   apellido: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
-  rolId: z.number().int().positive(),
+  celular: z.string().optional().nullable(),
+  domicilio: z.string().optional().nullable(),
+  codigoPostal: z.string().optional().nullable(),
+
+  // Identidad
+  tipoDocumento: z.nativeEnum(TipoDocumento).optional().nullable(),
+  documento: z.string().optional().nullable(),
+  cuil: z.string().optional().nullable(),
+
+  // Demográficos
   fechaNacimiento: z.coerce.date().optional().nullable(),
-  genero: z.enum(Genero).optional().nullable(),
-  estadoCivil: z.enum(EstadoCivil).optional().nullable(),
-  nacionalidad: z.string().max(100).optional().nullable(),
+  genero: z.nativeEnum(Genero).optional().nullable(),
+  estadoCivil: z.nativeEnum(EstadoCivil).optional().nullable(),
+  nacionalidad: z.nativeEnum(Nacionalidad).optional().nullable(),
 });
 
 const sortWhitelist = new Set(["userId", "email", "nombre", "apellido", "createdAt"]);
-
-// 👇 definí un alias de tipo para “usuario con rol”
 type UserWithRole = Prisma.UsuarioGetPayload<{ include: { rol: true } }>;
 
 export async function GET(req: NextRequest) {
@@ -45,13 +61,13 @@ export async function GET(req: NextRequest) {
     deletedAt: null as any,
     ...(q
       ? {
-        OR: [
-          { userId: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-          { nombre: { contains: q, mode: "insensitive" } },
-          { apellido: { contains: q, mode: "insensitive" } },
-        ],
-      }
+          OR: [
+            { userId: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
+            { nombre: { contains: q, mode: "insensitive" } },
+            { apellido: { contains: q, mode: "insensitive" } },
+          ],
+        }
       : {}),
   };
 
@@ -67,7 +83,7 @@ export async function GET(req: NextRequest) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   return NextResponse.json({
-    data: items.map((u) => ({                       // 👈 ahora TS conoce el tipo de u
+    data: items.map((u) => ({
       id: u.id,
       userId: u.userId,
       email: u.email,
@@ -76,6 +92,14 @@ export async function GET(req: NextRequest) {
       avatarUrl: u.avatarUrl,
       rol: u.rol ? { id: u.rol.id, nombre: u.rol.nombre } : null,
       createdAt: u.createdAt,
+
+      // campos nuevos por si querés mostrarlos en la tabla o exportar
+      tipoDocumento: u.tipoDocumento,
+      documento: u.documento,
+      cuil: u.cuil,
+      celular: u.celular,
+      domicilio: u.domicilio,
+      codigoPostal: u.codigoPostal,
       fechaNacimiento: u.fechaNacimiento,
       genero: u.genero,
       estadoCivil: u.estadoCivil,
@@ -93,15 +117,9 @@ export async function POST(req: NextRequest) {
     // normalizaciones
     const email = dto.email.trim().toLowerCase();
     const userId = dto.userId.trim();
-    const nombre = (dto.nombre ?? null) || null;
-    const apellido = (dto.apellido ?? null) || null;
-    const rolId = dto.rolId ?? 1;
-    const fechaNacimiento = dto.fechaNacimiento ?? null; // z.coerce.date() ya te entrega Date
-    const genero = dto.genero ?? null;
-    const estadoCivil = dto.estadoCivil ?? null;
-    const nacionalidad = (dto.nacionalidad ?? null) ? (dto.nacionalidad as string).trim() : null;
+    const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    // 1) ¿Existe un usuario ACTIVO con mismo email o userId?
+    // colisiones con activos
     const activeDup = await prisma.usuario.findFirst({
       where: {
         deletedAt: null,
@@ -109,87 +127,64 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true, email: true, userId: true },
     });
-
     if (activeDup) {
-      // Elegí un mensaje útil para el front (tu form ya mapea 409 -> setError)
       const field =
         activeDup.email === email ? "email" :
-          activeDup.userId === userId ? "userId" :
-            "usuario";
-      return NextResponse.json(
-        { message: `Ya existe un ${field} activo con ese valor.` },
-        { status: 409 }
-      );
+        activeDup.userId === userId ? "userId" : "usuario";
+      return NextResponse.json({ message: `Ya existe un ${field} activo con ese valor.` }, { status: 409 });
     }
 
-    // 2) ¿Existe un usuario SOFT-DELETED con ese email o userId?
+    // ¿existe soft-deleted?
     const soft = await prisma.usuario.findFirst({
-      where: {
-        deletedAt: { not: null },
-        OR: [{ email }, { userId }],
-      },
+      where: { deletedAt: { not: null }, OR: [{ email }, { userId }] },
       select: { id: true },
     });
 
-    const passwordHash = await bcrypt.hash(dto.password, 12);
+    const baseData = {
+      userId,
+      email,
+      password: passwordHash,
+      rolId: dto.rolId,
+
+      nombre: dto.nombre ?? null,
+      apellido: dto.apellido ?? null,
+      avatarUrl: dto.avatarUrl ?? null,
+
+      tipoDocumento: dto.tipoDocumento ?? null,
+      documento: dto.documento ?? null,
+      cuil: dto.cuil ?? null,
+
+      celular: dto.celular ?? null,
+      domicilio: dto.domicilio ?? null,
+      codigoPostal: dto.codigoPostal ?? null,
+
+      fechaNacimiento: dto.fechaNacimiento ?? null,
+      genero: dto.genero ?? null,
+      estadoCivil: dto.estadoCivil ?? null,
+      nacionalidad: dto.nacionalidad ?? null,
+    } as const;
 
     if (soft) {
-      // 3) Reactivar ese mismo registro (evita chocar la unique constraint)
       const revived = await prisma.usuario.update({
         where: { id: soft.id },
-        data: {
-          userId,
-          email,
-          password: passwordHash,
-          nombre,
-          apellido,
-          rolId,
-          avatarUrl: dto.avatarUrl ?? undefined,
-          deletedAt: null,
-          fechaNacimiento,
-          genero,
-          estadoCivil,
-          nacionalidad,
-        },
+        data: { ...baseData, deletedAt: null },
         select: { id: true },
       });
-
       return NextResponse.json({ id: revived.id, revived: true });
     }
 
-    // 4) Si no hay ni activo ni soft-deleted, creamos uno nuevo
     const created = await prisma.usuario.create({
-      data: {
-        userId,
-        email,
-        password: passwordHash,
-        nombre,
-        apellido,
-        rolId,
-        avatarUrl: dto.avatarUrl ?? undefined,
-        fechaNacimiento,
-        genero,
-        estadoCivil,
-        nacionalidad,
-      },
+      data: baseData,
       select: { id: true },
     });
 
     return NextResponse.json({ id: created.id, revived: false }, { status: 201 });
   } catch (err: any) {
-    // zod
     if (err?.issues) {
-      return NextResponse.json(
-        { message: err.issues.map((i: any) => i.message).join(", ") },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: err.issues.map((i: any) => i.message).join(", ") }, { status: 400 });
     }
-    // prisma unique (por si vuelve a colarse algo)
     if (err?.code === "P2002") {
-      return NextResponse.json(
-        { message: "Ya existe un usuario con ese email o userId." },
-        { status: 409 }
-      );
+      return NextResponse.json({ message: "Ya existe un usuario con ese email/documento/cuil/userId." }, { status: 409 });
     }
     console.error("POST /api/users error:", err);
     return NextResponse.json({ message: "Error creando usuario" }, { status: 500 });

@@ -4,7 +4,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 import { toast } from "sonner";
 
 import { createUserSchema, editUserSchema } from "@/features/users/schemas";
@@ -12,28 +12,7 @@ import { normalize, pathFromPublicUrl } from "@/features/users/utils";
 import { useRoles } from "@/features/users/hooks/useRoles";
 import { useAvatarStaging } from "@/features/users/hooks/useAvatarStaging";
 import { createUser, updateUser } from "@/features/users/api";
-import { Nacionalidad } from "@/constants/nacionalidad";
-import { Genero } from "@/constants/genero";
-import { EstadoCivil } from "@/constants/estadocivil";
-
-
-// ---- Extendemos los valores del form con los 4 campos nuevos
-export type UserFormValues = {
-  id?: string;
-  userId: string;
-  email: string;
-  password?: string;           // opcional en edit
-  nombre?: string;
-  apellido?: string;
-  avatarUrl?: string | null;
-  rolId?: number;
-
-  // NUEVO
-  fechaNacimiento?: Date | null;
-  genero?: Genero;
-  estadoCivil?: EstadoCivil;
-  nacionalidad?: Nacionalidad;
-};
+import type { UserFormValues } from "../types";
 
 type Mode = "create" | "edit";
 
@@ -43,19 +22,16 @@ export function useUserForm({
   onSuccess,
 }: {
   mode: Mode;
-  // extendemos el defaultValues para aceptar también los nuevos campos
   defaultValues?: Partial<UserFormValues> & {
+    id?: string;                              // 👈 id solo en los defaults (no en el form)
     rol?: { id: number };
-    // por si llegan como string ISO desde el fetch:
     fechaNacimiento?: string | Date | null;
   };
   onSuccess?: (id: string) => void;
 }) {
   const schema = mode === "create" ? createUserSchema : editUserSchema;
 
-  // ⚠️ Mapeamos defaults cada vez que cambian los props (fetch async)
   const derivedDefaults = useMemo<UserFormValues>(() => {
-    // fechaNacimiento puede venir como ISO string → la pasamos a Date
     const fh =
       defaultValues?.fechaNacimiento == null
         ? null
@@ -66,30 +42,37 @@ export function useUserForm({
     return {
       userId: defaultValues?.userId ?? "",
       email: defaultValues?.email ?? "",
-      // en edición no rellenamos password
       password: "",
+
       nombre: defaultValues?.nombre ?? "",
       apellido: defaultValues?.apellido ?? "",
       avatarUrl: defaultValues?.avatarUrl ?? "",
-      // acepta rolId directo o rol.id si viene poblado
-      rolId: defaultValues?.rolId ?? defaultValues?.rol?.id ?? 1,
-      id: defaultValues?.id,
 
-      // NUEVO
+      rolId: defaultValues?.rolId ?? defaultValues?.rol?.id ?? 1,
+
+      // Identidad / contacto
+      tipoDocumento: (defaultValues?.tipoDocumento as UserFormValues["tipoDocumento"]) ?? undefined,
+      documento: defaultValues?.documento ?? "",
+      cuil: defaultValues?.cuil ?? "",
+      celular: defaultValues?.celular ?? "",
+      domicilio: defaultValues?.domicilio ?? "",
+      codigoPostal: defaultValues?.codigoPostal ?? "",
+
+      // Demográficos
       fechaNacimiento: fh ?? null,
-      genero: (defaultValues?.genero as Genero) ?? undefined,
-      estadoCivil: (defaultValues?.estadoCivil as EstadoCivil) ?? undefined,
-      nacionalidad: (defaultValues?.nacionalidad as Nacionalidad) ?? undefined,
+      genero: (defaultValues?.genero as UserFormValues["genero"]) ?? undefined,
+      estadoCivil: (defaultValues?.estadoCivil as UserFormValues["estadoCivil"]) ?? undefined,
+      nacionalidad: (defaultValues?.nacionalidad as UserFormValues["nacionalidad"]) ?? undefined,
     };
   }, [defaultValues]);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(schema as any),
-    defaultValues: derivedDefaults,     // sólo primer render
+    defaultValues: derivedDefaults,
     mode: "onChange",
   });
 
-  // 👇 Rehidrata el form cuando lleguen/ cambien los datos
+  // Rehidratar cuando llegan nuevos defaults (fetch)
   useEffect(() => {
     form.reset(derivedDefaults);
   }, [derivedDefaults, form]);
@@ -101,21 +84,32 @@ export function useUserForm({
   const { tmpPath, setTmpPath, commit } = useAvatarStaging();
   const oldAvatarPath = pathFromPublicUrl(defaultValues?.avatarUrl || undefined);
 
+  // helpers
+  const toNull = (v: unknown) =>
+    v === "" || v === undefined ? null : (v as any);
+
   const onSubmit = async (values: UserFormValues) => {
-    console.log("[FORM] values RHF =>", values);
     try {
       const emailNorm = values.email.trim().toLowerCase();
 
-      // --- NUEVO: normalizamos y mapeamos los campos agregados
-      const payloadExtra = {
+      // Demográficos
+      const payloadDemograficos = {
         fechaNacimiento: values.fechaNacimiento
-          ? values.fechaNacimiento.toISOString() // si tu API espera Date ISO; si espera Date, quitá el toISOString()
+          ? values.fechaNacimiento.toISOString()
           : null,
         genero: values.genero ?? null,
         estadoCivil: values.estadoCivil ?? null,
-        nacionalidad: values.nacionalidad
-          ? normalize(values.nacionalidad)
-          : null,
+        nacionalidad: values.nacionalidad ?? null,
+      };
+
+      // Identidad / contacto
+      const payloadIdentidadContacto = {
+        tipoDocumento: values.tipoDocumento ?? null,
+        documento: toNull(values.documento?.trim()),
+        cuil: toNull(values.cuil?.trim()),
+        celular: toNull(values.celular?.trim()),
+        domicilio: toNull(values.domicilio?.trim()),
+        codigoPostal: toNull(values.codigoPostal?.trim()),
       };
 
       const basePayload: any = {
@@ -125,7 +119,8 @@ export function useUserForm({
         nombre: normalize(values.nombre),
         apellido: normalize(values.apellido),
         rolId: Number(values.rolId) || 1,
-        ...payloadExtra, // 👈 agregamos acá
+        ...payloadDemograficos,
+        ...payloadIdentidadContacto,
       };
 
       // En edit, si no hay nueva pass, no la envíes
@@ -139,16 +134,18 @@ export function useUserForm({
         if (tmpPath) {
           try {
             const r = await commit(`users/${created.id}`);
-            await updateUser(created.id, { avatarUrl: r.publicUrl }); // PATCH sólo avatar
+            await updateUser(created.id, { avatarUrl: r.publicUrl });
           } catch {
-            // no cortar el flujo por el avatar
+            /* no cortar flujo por avatar */
           }
         }
 
         toast.success("Usuario creado correctamente");
         onSuccess?.(created.id);
       } else {
-        const id = derivedDefaults.id as string;
+        const id = defaultValues?.id as string;     // 👈 usamos el id del recurso desde props
+        if (!id) throw new Error("Falta el id del usuario para actualizar");
+
         await updateUser(id, basePayload);
 
         if (tmpPath) {
@@ -156,7 +153,7 @@ export function useUserForm({
             const r = await commit(`users/${id}`, oldAvatarPath);
             await updateUser(id, { avatarUrl: r.publicUrl });
           } catch {
-            // no cortar el flujo por el avatar
+            /* no cortar flujo por avatar */
           }
         }
 
@@ -169,16 +166,14 @@ export function useUserForm({
       const rawMsg = ax.response?.data?.message;
       const serverMsg = Array.isArray(rawMsg) ? rawMsg.join(", ") : rawMsg || err.message || "Error al guardar";
 
-      const msg =
-        (Array.isArray(ax.response?.data?.message)
-          ? ax.response?.data?.message.join(", ")
-          : ax.response?.data?.message) || err.message || "Error al guardar";
-      toast.error(msg);
+      toast.error(serverMsg);
 
       // 409 → duplicados
       if (status === 409) {
         if (/email/i.test(serverMsg)) form.setError("email", { type: "server", message: "El email ya está registrado." });
         if (/userId/i.test(serverMsg)) form.setError("userId", { type: "server", message: "El usuario (userId) ya existe." });
+        if (/documento/i.test(serverMsg)) form.setError("documento", { type: "server", message: "El documento ya está registrado." });
+        if (/CUIL|cuil/i.test(serverMsg)) form.setError("cuil", { type: "server", message: "El CUIL ya está registrado." });
       }
       throw err;
     }

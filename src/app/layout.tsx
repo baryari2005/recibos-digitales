@@ -1,4 +1,5 @@
 // src/app/layout.tsx
+import MobileUnsupported from "@/components/MobileUnsupported";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Poppins } from "next/font/google";
@@ -36,14 +37,21 @@ const poppins = Poppins({
 
 export const metadata = { title: "Sistema de Gestión de Documentos Laborales" };
 
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-     <html lang="es" className={poppins.variable}>
-      {/* <body className={`${poppins.variable} font-sans antialiased`}> */}
-      {/* <body className={`${playfair.variable} font-sans antialiased`}> */}
+    <html lang="es" className={poppins.variable}>
       <body className="font-sans antialiased">
-        {children}
-        <Toaster />
+        {/* App solo en pantallas grandes */}
+        <div className="hidden lg:block">
+          {children}
+          <Toaster />
+        </div>
+
+        {/* Cartel en móvil / ventana chica */}
+        <div className="lg:hidden">
+          <MobileUnsupported />
+        </div>
       </body>
     </html>
   );

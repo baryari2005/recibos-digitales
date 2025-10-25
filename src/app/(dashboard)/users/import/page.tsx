@@ -14,24 +14,37 @@ import { FileDown, Loader2, Upload, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconInput } from "@/components/inputs/IconInput";
 import { Separator } from "@/components/ui/separator";
+import { Nacionalidad } from "@prisma/client";
 
 type Source = "pdf" | "excel";
 
 type ExcelRow = {
   userId: string | null;
-  email: string | null;
-  nombre: string | null;
-  apellido: string | null;
-  fechaNacimiento: string | null; // YYYY-MM-DD
-  fechaIngreso: string | null; // YYYY-MM-DD
-  genero: string | null;
-  estadoCivil: string | null;
-  nacionalidad: string | null;
-  legajo: string | null;
   tipoDocumento: string | null;
   documento: string | null;
   cuil: string | null;
+  email: string | null;
+  nombre: string | null;
+  apellido: string | null;
+  fechaNacimiento: string | null;
+  celular: string | null;
+  domicilio: string | null;
+  codigoPostal: string | null;
+  estadoCivil: string | null;
+  nacionalidad: string | null;
+  legajo: string | null;
+  genero: string | null;
+  matriculaProvincial: string | null;
+  matriculaNacional: string | null;
+  fechaIngreso: string | null;
+  fechaEgreso: string | null;
+  estadoLaboral: string | null;
+  tipoContrato: string | null;
   puesto: string | null;
+  area: string | null;
+  departamento: string | null;
+  categoria: string | null;
+  observaciones: string | null;
 }
 
 type Row = {
@@ -98,6 +111,9 @@ export default function ImportUsersPage() {
       const mapped: ExcelRow[] = json.map((r) => {
         // soportá variaciones de headers
         const userId = r.userId ?? r["userId"] ?? null;
+        const tipoDocumento = r.tipoDocumento ?? r["tipoDocumento"] ?? null;
+        const documento = r.documento ?? r["documento"] ?? null;
+        const cuil = r.cuil ?? r["cuil"] ?? null;
         const email = r.email ?? r["email"] ?? null;
         const nombre = r.nombre ?? r["nombre"] ?? null;
         const apellido = r.apellido ?? r["apellido"] ?? null;
@@ -105,14 +121,25 @@ export default function ImportUsersPage() {
         const fechaNacimiento = normalizeExcelDate(rawFecha); // -> YYYY-MM-DD | null
         const rawFechaIngreso = r.fechaIngreso ?? r["fechaIngreso"] ?? null;
         const fechaIngreso = normalizeExcelDate(rawFechaIngreso); // -> YYYY-MM-DD | null
-        const genero = r.genero ?? r["genero"] ?? null;
+        const rawFechaEgreso = r.fechaEgreso ?? r["fechaEgreso"] ?? null;
+        const fechaEgreso     = normalizeExcelDate(rawFechaEgreso);
+        const celular = r.celular ?? r["celular"] ?? null;
+        const domicilio = r.domicilio ?? r["domicilio"] ?? null;
+        const codigoPostal = r.codigoPostal ?? r["codigoPostal"] ?? null;
         const estadoCivil = r.estadoCivil ?? r["estadoCivil"] ?? null;
         const nacionalidad = r.nacionalidad ?? r["nacionalidad"] ?? null;
-        const legajo = r.legajo ?? r["numeroLegajo"] ?? null;
-        const tipoDocumento = r.tipoDocumento ?? r["tipoDocumento"] ?? null;
-        const documento = r.documento ?? r["documento"] ?? null;
-        const cuil = r.cuil ?? r["cuil"] ?? null;
+        const legajo = r.numeroLegajo ?? r["numeroLegajo"] ?? null;
+        const genero = r.genero ?? r["genero"] ?? null;
+        const matriculaProvincial = r.matriculaProvincial ?? r["matriculaProvincial"] ?? null;
+        const matriculaNacional = r.matriculaNacional ?? r["matriculaNacional"] ?? null;
+        const estadoLaboral = r.estadoLaboral ?? r["estadoLaboral"] ?? null;
+        const tipoContrato = r.tipoContrato ?? r["tipoContrato"] ?? null;
         const puesto = r.puesto ?? r["puesto"] ?? null;
+        const area = r.area ?? r["area"] ?? null;
+        const departamento = r.departamento ?? r["departamento"] ?? null;
+        const categoria = r.categoria ?? r["categoria"] ?? null;
+        const observaciones = r.observaciones ?? r["observaciones"] ?? null;
+
 
         return {
           userId: nullifyEmpty(StringOrNull(userId)),
@@ -121,6 +148,7 @@ export default function ImportUsersPage() {
           apellido: nullifyEmpty(StringOrNull(apellido)),
           fechaNacimiento,
           fechaIngreso,
+          fechaEgreso,
           genero: nullifyEmpty(StringOrNull(genero)),
           estadoCivil: nullifyEmpty(StringOrNull(estadoCivil)),
           nacionalidad: nullifyEmpty(StringOrNull(nacionalidad)),
@@ -129,7 +157,17 @@ export default function ImportUsersPage() {
           documento: nullifyEmpty(StringOrNull(documento)),
           cuil: nullifyEmpty(StringOrNull(cuil)),
           puesto: nullifyEmpty(StringOrNull(puesto)),
-
+          celular: nullifyEmpty(StringOrNull(celular)),
+          domicilio: nullifyEmpty(StringOrNull(domicilio)),
+          codigoPostal: nullifyEmpty(StringOrNull(codigoPostal)),
+          matriculaProvincial: nullifyEmpty(StringOrNull(matriculaProvincial)),
+          matriculaNacional: nullifyEmpty(StringOrNull(matriculaNacional)),
+          estadoLaboral: nullifyEmpty(StringOrNull(estadoLaboral)),
+          tipoContrato: nullifyEmpty(StringOrNull(tipoContrato)),
+          area: nullifyEmpty(StringOrNull(area)),
+          departamento: nullifyEmpty(StringOrNull(departamento)),
+          categoria: nullifyEmpty(StringOrNull(categoria)),
+          observaciones: nullifyEmpty(StringOrNull(observaciones)),
         };
       });
 
@@ -169,16 +207,16 @@ export default function ImportUsersPage() {
           const payload = {
             user: {
               userId: baseId, // si ya existe NO se cambia
-              email: `${baseId}@example.com`, // placeholder si no tenés email
-              nombre,
-              apellido,
-              rolId: 1,
-            },
-            legajo: {
-              employeeNumber: r.legajo ? Number(r.legajo) : null,
               documentType: "DNI",
               documentNumber: extractDniFromCuil(r.cuil || ""),
               cuil: r.cuil || null,
+              email: `${baseId}@example.com`, // placeholder si no tenés email
+              nombre,
+              apellido,
+              rolId: 2,
+            },
+            legajo: {
+              employeeNumber: r.legajo ? Number(r.legajo) : null,
               admissionDate: r.fechaIngreso || null, // "YYYY-MM-DD"
               terminationDate: null,
               employmentStatus: "ACTIVO",
@@ -240,20 +278,23 @@ export default function ImportUsersPage() {
           const payload = {
             user: {
               userId: r.userId, // si ya existe NO se cambia
+              documentType: r.tipoDocumento,
+              documentNumber: r.documento,
+              cuil: r.cuil || null,
               email: r.email, // placeholder si no tenés email
               nombre: r.nombre,
               apellido: r.apellido,
               fechaNacimiento: r.fechaNacimiento,
+              celular: r.celular,
+              domicilio: r.domicilio,
+              codigoPostal: r.codigoPostal,
               genero: r.genero,
-              estadoCivil: r.estadoCivil,
+              estadoCivil: r.estadoCivil,            
               nacionalidad: r.nacionalidad,
               rolId: 2,
             },
             legajo: {
               employeeNumber: r.legajo ? Number(r.legajo) : null,
-              documentType: r.tipoDocumento,
-              documentNumber: r.documento,
-              cuil: r.cuil || null,
               admissionDate: r.fechaIngreso || null, // "YYYY-MM-DD"
               terminationDate: null,
               employmentStatus: "ACTIVO",
@@ -263,6 +304,8 @@ export default function ImportUsersPage() {
               department: null,
               category: null,
               notes: null,
+              matriculaProvincial: r.matriculaProvincial,
+              matriculaNacional: r.matriculaNacional,
             },
           };
 

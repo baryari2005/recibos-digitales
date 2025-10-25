@@ -11,6 +11,7 @@ type MeResponse = {
     nombre: string | null;
     apellido: string | null;
     avatarUrl: string | null;
+    mustChangePassword: boolean;
     rol?: { id: number; nombre: string } | null;
   } | null;
 };

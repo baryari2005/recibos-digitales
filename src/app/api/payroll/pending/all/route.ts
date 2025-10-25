@@ -34,12 +34,8 @@ export async function GET(req: NextRequest) {
     const me = await getServerMe(req);
     const userId = me?.user?.id;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const legajo = await prisma.legajo.findUnique({
-      where: { usuarioId: userId },
-      select: { cuil: true },
-    });
-    const rawCuil = legajo?.cuil || (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
+    
+    const rawCuil = (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
     if (!rawCuil) return NextResponse.json({ error: "CUIL no configurado en tu perfil." }, { status: 400 });
 
     const cuil = cuilDashed(rawCuil);

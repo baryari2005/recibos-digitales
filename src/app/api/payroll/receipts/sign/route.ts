@@ -41,9 +41,10 @@ export async function PATCH(req: NextRequest) {
     // Traer CUIL y nombre
     const legajo = await prisma.legajo.findUnique({
       where: { usuarioId: userId },
-      select: { cuil: true, usuario: { select: { nombre: true, apellido: true } } },
+      select: { usuario: { select: { nombre: true, apellido: true } } },
     });
-    const rawCuil = legajo?.cuil || (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
+
+    const rawCuil = (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
     if (!rawCuil) return NextResponse.json({ error: "CUIL no configurado" }, { status: 400 });
     const cuil = cuilDashed(rawCuil);
 

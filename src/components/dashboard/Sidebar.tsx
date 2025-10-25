@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Calendar, ClipboardList, FileSignature, FileText, HelpCircle, Home, Import, Menu, Shield, UserRoundCog, Users,
+  Calendar, ClipboardList, FileDown, FileSignature, FileText, FileUp, HelpCircle, Home, Import, Menu, Shield, UserRoundCog, Users,
   type LucideIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -88,8 +88,9 @@ export function Sidebar({ user }: SidebarProps) {
 
   }, [user]);
 
+  console.log(user?.rol?.nombre);
   const isAdminByRole =
-    (user?.rol?.nombre ?? "") === "admin";
+    (user?.rol?.nombre?.toLowerCase() ?? "") === "administrador";
 
   const isAdmin = isAdminByRole;
 
@@ -131,9 +132,17 @@ export function Sidebar({ user }: SidebarProps) {
             iconSize={ICO}
           />
           <NavIcon
-            Icon={Import}
+            Icon={FileUp}
             href="/users/import"
             title="Importar Usuarios"
+            active={pathname.startsWith("/users")}
+            btnSize={BTN}
+            iconSize={ICO}
+          />
+          <NavIcon
+            Icon={FileDown}
+            href="/users/export"
+            title="Exportar Usuarios"
             active={pathname.startsWith("/users")}
             btnSize={BTN}
             iconSize={ICO}
@@ -144,6 +153,15 @@ export function Sidebar({ user }: SidebarProps) {
             href="/admin/docs"
             title="Subir PDF de recibos"
             active={pathname.startsWith("/admin/docs")}
+            btnSize={BTN}
+            iconSize={ICO}
+          />
+          <Separator className="my-2 bg-white/20 w-10" />
+          <NavIcon
+            Icon={FileText}
+            href="/payroll/receipts"
+            title="Recibos de sueldo"
+            active={pathname.startsWith("/payroll/receipts")}
             btnSize={BTN}
             iconSize={ICO}
           />

@@ -18,7 +18,8 @@
     "clean:deps": "rimraf node_modules package-lock.json pnpm-lock.yaml yarn.lock",
     "clean:all": "npm run clean && npm run clean:deps",
     "reset:hard": "npm run clean:all && npm i",
-    "rebuild": "npm run clean && npm run build"
+    "rebuild": "npm run clean && npm run build",
+     "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

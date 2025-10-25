@@ -14,7 +14,7 @@ export default function EditUserPage() {
   const { id } = useParams<{ id: string }>();
 
   return (
-    <RoleGate allow={["admin"]} mode="render">
+    <RoleGate allowIds={[2]} mode="render">
       <EditUserContent id={id} />
     </RoleGate>
   );
@@ -46,6 +46,12 @@ function EditUserContent({ id }: { id: string }) {
         apellido: data.apellido ?? "",
         avatarUrl: data.avatarUrl ?? "",
         rolId: data.rolId ?? data.rol?.id ?? 1,
+        tipoDocumento: data.tipoDocumento ?? undefined,
+        documento: data.documento ?? "",
+        cuil: data.cuil ?? "",
+        celular: data.celular ?? "",
+        domicilio: data.domicilio ?? "",
+        codigoPostal: data.codigoPostal ?? "",
         fechaNacimiento: data.fechaNacimiento
           ? new Date(data.fechaNacimiento) // si viene ISO string
           : null,

@@ -10,6 +10,9 @@ export async function getBearer(req: NextRequest) {
 
 export async function getServerMe(req: NextRequest) {
   const token = await getBearer(req);
+
+  
+
   if (!token) return { user: null };
   try {
     const payload = await verifyJwt(token); // { uid, rid?, rname? }
@@ -21,10 +24,20 @@ export async function getServerMe(req: NextRequest) {
         email: true,
         nombre: true,
         apellido: true,
-        avatarUrl: true,  
-        mustChangePassword: true,       
+        avatarUrl: true,
+        mustChangePassword: true,
+        cuil: true, // 👈 está en Usuario
         rol: { select: { id: true, nombre: true } },
-        legajo: { select: { cuil: true } },
+        legajo: {
+          select: {
+            numeroLegajo: true,
+            estadoLaboral: true,
+            tipoContrato: true,
+            puesto: true,
+            area: true,
+            departamento: true,
+          },
+        },
       },
     });
     return { user };

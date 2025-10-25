@@ -6,7 +6,11 @@ export type Stat = {
   labelTop: string;
   labelBottom: string;
   value: number | string;
-  iconName: "FileSignature" | "ClipboardList" | "Plane" | "Gift" | "Default";
+  iconName: "Palmtree" | "FileSignature" | "ClipboardList" | "Plane" | "Gift" | "Default";
+  href?: string;                 // opcional: navegar con Link
+  onClick?: () => void;          // opcional: handler custom
+  disabled?: boolean;
+  disabledHint?: string;
 };
 
 export type OrgMember = {

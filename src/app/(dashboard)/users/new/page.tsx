@@ -10,7 +10,7 @@ import { User } from "lucide-react";
 export default function NewUserPage() {
   const router = useRouter();
   return (
-    <RoleGate allow={["admin"]} mode="render">
+    <RoleGate allowIds={[2]} mode="render">
       <div className="grid gap-6">
         <Card>
           <CardHeader>

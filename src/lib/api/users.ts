@@ -9,13 +9,14 @@ export type User = {
   lastName?: string | null;
   avatarUrl?: string | null;
   roleId: number;
+  documentType?: string | null;
+  documentNumber?: string | null;
+  cuil?: string | null;
 };
 
 export type PersonnelFile = {
   employeeNumber?: number | null;
-  documentType?: string | null;
-  documentNumber?: string | null;
-  cuil?: string | null;
+  
   admissionDate?: string | null;
   terminationDate?: string | null;
   employmentStatus: string;
@@ -24,26 +25,35 @@ export type PersonnelFile = {
   area?: string | null;
   department?: string | null;
   category?: string | null;
+  // 👇 AGREGAR ESTOS DOS CAMPOS
+  matriculaProvincial?: string | null;
+  matriculaNacional?: string | null;
   notes?: string | null;
 };
 
-const s = (v?: string | null) => (v && v.trim() !== "" ? v : undefined);
+// helpers actuales
+const s = (v?: string | null) => (v && v.trim() !== "" ? v.trim() : undefined);
 const n = (v?: number | null) => (typeof v === "number" && !Number.isNaN(v) ? v : undefined);
+
+// 👇 NUEVO helper que devuelve null (para que la clave SIEMPRE viaje)
+const sNull = (v?: string | null) => (v && v.trim() !== "" ? v.trim() : null);
 
 export function cleanPersonnelFile(p: PersonnelFile): Partial<PersonnelFile> {
   return {
-    employeeNumber: n(p.employeeNumber ?? null),
-    documentType: s(p.documentType ?? undefined),      // Prisma enum on backend
-    documentNumber: s(p.documentNumber ?? undefined),
-    cuil: s(p.cuil ?? undefined),
-    admissionDate: s(p.admissionDate ?? undefined),    // omit empty -> passes @IsDateString
+    employeeNumber: n(p.employeeNumber ?? null),    
+    admissionDate: s(p.admissionDate ?? undefined),
     terminationDate: s(p.terminationDate ?? undefined),
-    employmentStatus: p.employmentStatus,              // required enum
-    contractType: s(p.contractType ?? undefined),      // Prisma enum on backend
+    employmentStatus: p.employmentStatus,
+    contractType: s(p.contractType ?? undefined),
     position: s(p.position ?? undefined),
     area: s(p.area ?? undefined),
     department: s(p.department ?? undefined),
     category: s(p.category ?? undefined),
+
+    // 👇 INCLUIR SIEMPRE LAS MATRÍCULAS (null si están vacías)
+    matriculaProvincial: sNull(p.matriculaProvincial ?? null),
+    matriculaNacional:  sNull(p.matriculaNacional ?? null),
+
     notes: s(p.notes ?? undefined),
   };
 }

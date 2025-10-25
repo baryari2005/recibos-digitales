@@ -3,6 +3,7 @@ export const ESTADO_CIVIL_OPCIONES = [
   "CASADO",
   "DIVORCIADO",
   "VIUDO",
-  "UNIDO",
+  "UNION_CONVIVENCIAL", // 👈 correcto
+  "OTRO",
 ] as const;
 export type EstadoCivil = typeof ESTADO_CIVIL_OPCIONES[number];

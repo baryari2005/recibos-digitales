@@ -1,22 +1,25 @@
-// src/components/users/LegajoForm.tsx
 "use client";
 
-import { Controller, useForm } from "react-hook-form";
+import { useForm, type SubmitHandler, type Resolver, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { legajoSchema, type LegajoValues } from "@/lib/validations/legajo.schema";
+import {
+  legajoSchema,
+  type LegajoValues,
+  EMPLOYMENT_STATUS,
+  CONTRACT_TYPES,
+} from "@/features/users/legajo.schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { formatMessage } from "@/utils/formatters";
-import { CuilInput } from "@/components/inputs/CuilInput";
-
-const DOC_TYPES = ["DNI", "PAS", "LE", "LC", "CI"] as const;
-const EMPLOYMENT_STATUS = ["ACTIVO", "SUSPENDIDO", "LICENCIA", "BAJA"] as const;
-const CONTRACT_TYPES = ["INDETERMINADO", "PLAZO_FIJO", "TEMPORAL", "PASANTIA", "MONOTRIBUTO"] as const;
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 /** Acepta "YYYY-MM-DD", ISO, o vacío y devuelve "YYYY-MM-DD" o "" */
 const toInputDate = (v?: string | null) => {
@@ -30,19 +33,41 @@ const toInputDate = (v?: string | null) => {
   return `${y}-${m}-${day}`;
 };
 
+const toYMD = (d: Date) => {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const ymdToUTCDate = (s?: string | null) => (s ? new Date(`${s}T00:00:00.000Z`) : null);
+
+const toTitle = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+
+const SMALL = new Set(["de", "del", "la", "las", "los", "y", "o", "u", "a", "en", "para", "por", "con", "sin", "al"]);
+const smartTitleCase = (raw: string) => {
+  const s = (raw ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!s) return "";
+  return s
+    .split(" ")
+    .map((w, i) => (i > 0 && SMALL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+};
+
 type Props = {
   defaultValues: Partial<LegajoValues>;
-  onSubmit: (v: LegajoValues) => Promise<void>;
+  onSubmit: SubmitHandler<LegajoValues>; // 👈 tipar así
 };
 
 export function LegajoForm({ defaultValues, onSubmit }: Props) {
   const form = useForm<LegajoValues>({
-    resolver: zodResolver(legajoSchema),
+    resolver: zodResolver(legajoSchema) as Resolver<LegajoValues>,
     defaultValues: {
       employeeNumber: defaultValues.employeeNumber ?? undefined,
-      documentType: defaultValues.documentType ?? undefined,
-      documentNumber: defaultValues.documentNumber ?? "",
-      cuil: defaultValues.cuil ?? "",
       admissionDate: toInputDate(defaultValues.admissionDate),
       terminationDate: toInputDate(defaultValues.terminationDate),
       employmentStatus: defaultValues.employmentStatus ?? "ACTIVO",
@@ -51,6 +76,9 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
       area: defaultValues.area ?? "",
       department: defaultValues.department ?? "",
       category: defaultValues.category ?? "",
+      // matrículas (string vacío → schema lo normaliza a null)
+      matriculaProvincial: defaultValues.matriculaProvincial ?? "",
+      matriculaNacional: defaultValues.matriculaNacional ?? "",
       notes: defaultValues.notes ?? "",
     },
     mode: "onSubmit",
@@ -58,107 +86,100 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
 
   const {
     register,
-    control,
     watch,
     setValue,
     formState: { errors, isSubmitting },
     handleSubmit,
   } = form;
 
+  const toUpper = (v: string) => v.trim().toUpperCase();
+
   return (
-    <form
-      onSubmit={handleSubmit(async (v) => onSubmit(v))}
-      className="grid gap-4 md:grid-cols-2"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
       {/* N° Legajo */}
       <div className="space-y-1">
         <Label>Legajo</Label>
         <Input
           type="number"
           className="h-11 rounded border pr-3"
-          {...register("employeeNumber", { valueAsNumber: true })}
+          {...register("employeeNumber", {
+            setValueAs: (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+          })}
         />
         {errors.employeeNumber && (
           <p className="text-xs text-red-600">{String(errors.employeeNumber.message)}</p>
         )}
       </div>
 
-      {/* Tipo de documento */}
-      <div className="space-y-1">
-        <Label>Tipo de documento</Label>
-        <Select
-          value={watch("documentType") ?? ""}
-          onValueChange={(val) => setValue("documentType", val, { shouldValidate: true })}
-        >
-          <SelectTrigger className="w-full h-11 rounded border px-3 text-sm">
-            <SelectValue placeholder="Seleccionar" />
-          </SelectTrigger>
-          <SelectContent>
-            {DOC_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.documentType && (
-          <p className="text-xs text-red-600">{String(errors.documentType.message)}</p>
-        )}
-      </div>
-
-      {/* Documento */}
-      <div className="space-y-1">
-        <Label>Número de documento</Label>
-        <Input className="h-11 rounded border pr-3" {...register("documentNumber")} />
-        {errors.documentNumber && (
-          <p className="text-xs text-red-600">{String(errors.documentNumber.message)}</p>
-        )}
-      </div>
-
-      {/* CUIL con máscara ##-########-# */}
-      <div className="space-y-1">
-        <Label>CUIL</Label>
-        <Controller
-          name="cuil"
-          control={control}
-          render={({ field, fieldState }) => (
-            <>
-              <CuilInput
-                className="h-11 rounded border pr-3"
-                /* 👇 normalizo para que nunca sea null */
-                value={field.value ?? ""}
-                name={field.name}
-                onBlur={field.onBlur}
-                /* Mantengo el onChange estándar del RHF */
-                onChange={field.onChange}
-                /* Además, si tu CuilInput expone onValueChange con los 11 dígitos,
-                   actualizo el valor del form con eso */
-                onValueChange={(digits) => field.onChange(digits)}
-              />
-              {fieldState.error && (
-                <p className="text-xs text-red-600">{String(fieldState.error.message)}</p>
-              )}
-            </>
-          )}
-        />
-        
-      </div>
-
       {/* Fechas */}
       <div className="space-y-1">
         <Label>Fecha de ingreso</Label>
-        <Input type="date" className="h-11 rounded border pr-3" {...register("admissionDate")} />
-        {errors.admissionDate && (
-          <p className="text-xs text-red-600">{String(errors.admissionDate.message)}</p>
-        )}
+        <Controller
+          control={form.control}
+          name="admissionDate"
+          render={({ field }) => {
+            const selected = ymdToUTCDate(field.value);
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" type="button" className="w-full justify-start h-11 rounded border">
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {selected ? format(selected, "dd/MM/yyyy", { locale: es }) : (
+                      <span className="text-muted-foreground">Seleccionar fecha</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selected ?? undefined}
+                    onSelect={(d) => field.onChange(d ? toYMD(d) : null)}
+                    initialFocus
+                    captionLayout="dropdown"
+                    fromYear={1940}
+                    toYear={new Date().getFullYear()}
+                  />
+                </PopoverContent>
+              </Popover>
+            );
+          }}
+        />
+        {errors.admissionDate && <p className="text-xs text-red-600">{String(errors.admissionDate.message)}</p>}
       </div>
 
       <div className="space-y-1">
         <Label>Fecha de egreso</Label>
-        <Input type="date" className="h-11 rounded border pr-3" {...register("terminationDate")} />
-        {errors.terminationDate && (
-          <p className="text-xs text-red-600">{String(errors.terminationDate.message)}</p>
-        )}
+        <Controller
+          control={form.control}
+          name="terminationDate"
+          render={({ field }) => {
+            const selected = ymdToUTCDate(field.value);
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" type="button" className="w-full justify-start h-11 rounded border">
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {selected ? format(selected, "dd/MM/yyyy", { locale: es }) : (
+                      <span className="text-muted-foreground">Seleccionar fecha</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selected ?? undefined}
+                    onSelect={(d) => field.onChange(d ? toYMD(d) : null)}
+                    initialFocus
+                    captionLayout="dropdown"
+                    fromYear={1940}
+                    toYear={new Date().getFullYear()}
+                  />
+                </PopoverContent>
+              </Popover>
+            );
+          }}
+        />
+        {errors.terminationDate && <p className="text-xs text-red-600">{String(errors.terminationDate.message)}</p>}
       </div>
 
       {/* Estado */}
@@ -166,7 +187,11 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
         <Label>Estado</Label>
         <Select
           value={watch("employmentStatus")}
-          onValueChange={(val) => setValue("employmentStatus", val, { shouldValidate: true })}
+          onValueChange={(val) =>
+            setValue("employmentStatus", val as LegajoValues["employmentStatus"], {
+              shouldValidate: true,
+            })
+          }
         >
           <SelectTrigger className="w-full h-11 rounded border px-3 text-sm">
             <SelectValue />
@@ -174,7 +199,7 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
           <SelectContent>
             {EMPLOYMENT_STATUS.map((t) => (
               <SelectItem key={t} value={t}>
-                {t}
+                {toTitle(t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -189,7 +214,11 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
         <Label>Tipo de contratación</Label>
         <Select
           value={watch("contractType") ?? ""}
-          onValueChange={(val) => setValue("contractType", val, { shouldValidate: true })}
+          onValueChange={(val) =>
+            setValue("contractType", (val || null) as LegajoValues["contractType"], {
+              shouldValidate: true,
+            })
+          }
         >
           <SelectTrigger className="w-full h-11 rounded border px-3 text-sm">
             <SelectValue placeholder="Seleccionar" />
@@ -197,7 +226,7 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
           <SelectContent>
             {CONTRACT_TYPES.map((t) => (
               <SelectItem key={t} value={t}>
-                {t}
+                {toTitle(t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -210,22 +239,69 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
       {/* Campos libres */}
       <div className="space-y-1">
         <Label>Cargo / Puesto</Label>
-        <Input className="h-11 rounded border pr-3" {...register("position")} />
+        <Input
+          className="h-11 rounded border pr-3"
+          {...register("position", { setValueAs: (v) => smartTitleCase(String(v ?? "")) })}
+          onBlur={(e) => setValue("position", smartTitleCase(e.target.value), { shouldDirty: true, shouldValidate: true })}
+        />
       </div>
 
       <div className="space-y-1">
         <Label>Área</Label>
-        <Input className="h-11 rounded border pr-3" {...register("area")} />
+        <Input
+          className="h-11 rounded border pr-3"
+          {...register("area", { setValueAs: (v) => smartTitleCase(String(v ?? "")) })}
+          onBlur={(e) => setValue("area", smartTitleCase(e.target.value), { shouldDirty: true, shouldValidate: true })}
+        />
       </div>
 
       <div className="space-y-1">
         <Label>Departamento</Label>
-        <Input className="h-11 rounded border pr-3" {...register("department")} />
+        <Input
+          className="h-11 rounded border pr-3"
+          {...register("department", { setValueAs: (v) => smartTitleCase(String(v ?? "")) })}
+          onBlur={(e) => setValue("department", smartTitleCase(e.target.value), { shouldDirty: true, shouldValidate: true })}
+        />
       </div>
 
       <div className="space-y-1">
         <Label>Categoría</Label>
-        <Input className="h-11 rounded border pr-3" {...register("category")} />
+        <Input
+          className="h-11 rounded border pr-3"
+          {...register("category", { setValueAs: (v) => smartTitleCase(String(v ?? "")) })}
+          onBlur={(e) => setValue("category", smartTitleCase(e.target.value), { shouldDirty: true, shouldValidate: true })}
+        />
+      </div>
+
+      {/* Matrículas */}
+      <div className="space-y-1">
+        <Label>Matrícula provincial</Label>
+        <Input
+          className="h-11 rounded border pr-3"
+          {...register("matriculaProvincial", { setValueAs: (v) => toUpper(String(v ?? "")) })}
+          onBlur={(e) =>
+            setValue("matriculaProvincial", toUpper(e.target.value), { shouldDirty: true, shouldValidate: true })
+          }
+          placeholder="Ej: MP 1234"
+        />
+        {errors.matriculaProvincial && (
+          <p className="text-xs text-red-600">{String(errors.matriculaProvincial.message)}</p>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <Label>Matrícula nacional</Label>
+        <Input
+          className="h-11 rounded border pr-3"
+          {...register("matriculaNacional", { setValueAs: (v) => toUpper(String(v ?? "")) })}
+          onBlur={(e) =>
+            setValue("matriculaNacional", toUpper(e.target.value), { shouldDirty: true, shouldValidate: true })
+          }
+          placeholder="Ej: MN 5678"
+        />
+        {errors.matriculaNacional && (
+          <p className="text-xs text-red-600">{String(errors.matriculaNacional.message)}</p>
+        )}
       </div>
 
       <div className="md:col-span-2 space-y-1">
