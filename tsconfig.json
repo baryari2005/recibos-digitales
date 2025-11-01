@@ -22,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/(dashboard)/(with-sidebar)/layout.2", "src/lib/axios2.ant", "src/components/auth/ResetPasswordForm.borrar", "src/app/forgot-password/page.borrar", "src/app/no-autorizado/page.borrar", "src/app/api/users/[id]/legajo/route.back", "src/app/(dashboard)/receipts/page.ant"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/(dashboard)/(with-sidebar)/layout.2", "src/lib/axios2.ant", "src/components/auth/ResetPasswordForm.borrar", "src/app/forgot-password/page.borrar", "src/app/no-autorizado/page.borrar", "src/app/api/users/[id]/legajo/route.back", "src/app/(dashboard)/receipts/page.ant", "src/app/(dashboard)/users/import/page.ant"],
   "exclude": ["node_modules"]
 }

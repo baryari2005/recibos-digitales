@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ArrowBigLeft, ArrowBigRight } from "lucide-react";
 
 export type DataTableProps<T> = {
   data: T[];
@@ -136,6 +136,7 @@ export function GenericDataTable<T>({
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1 || loading}
           >
+            <ArrowBigLeft className="w-4 h-4" />
             Anterior
           </Button>
           <Button
@@ -144,6 +145,7 @@ export function GenericDataTable<T>({
             disabled={page >= totalPages || loading}
           >
             Siguiente
+            <ArrowBigRight className="w-4 h-4" />
           </Button>
         </div>
       </div>

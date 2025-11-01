@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { useUserForm } from "./hooks/useUserForm";
 import { UserFormFields } from "./UserFormFields";
-import { Loader2 } from "lucide-react";
+import { Loader2, Save, UserPlus } from "lucide-react";
 import { formatMessage } from "@/utils/formatters";
 import { UserFormValues } from "./types";
 import { useMemo, useEffect } from "react";
@@ -60,7 +60,7 @@ export function UserForm({
   return (
     <form
       id="user-form"
-      className="grid gap-4 md:grid-cols-2"
+      className="w-full"
       onSubmit={(e) => {
         e.preventDefault(); // aseguramos que siempre pase por RHF
         handleSubmit();
@@ -91,7 +91,17 @@ export function UserForm({
               <Loader2 className="animate-spin" size={18} />
               {formatMessage("Guardando...")}
             </span>
-          ) : mode === "create" ? "Crear usuario" : "Guardar cambios"}
+          ) : mode === "create" ? (
+            <span className="inline-flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              Crear usuario
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              Guardar cambios
+            </span>
+          )}
         </Button>
       </div>
     </form>

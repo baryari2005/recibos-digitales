@@ -30,6 +30,7 @@ export default function DashboardPage() {
     { id: "absences", labelTop: "Ausencias", labelBottom: "Pendientes de aprobación", value: 0, iconName: "ClipboardList", disabled: true, disabledHint: "Funcionalidad no implementada" },
     { id: "vacations", labelTop: "Vacaciones", labelBottom: "Días disponibles", value: 0, iconName: "Plane", disabled: true, disabledHint: "Funcionalidad no implementada" },];
 
+  
   const documentsStat: Stat = {
     id: "documents",
     labelTop: "Documentos",
@@ -40,6 +41,8 @@ export default function DashboardPage() {
         : "Sin pendientes",
     value: pendingDocs, // 0 o 1
     iconName: "FileSignature",
+    disabled: user?.rol?.id == 2 ? true :  false,
+    disabledHint: user?.rol?.id == 2 ? "Funcianalidad no disponible para usuario admin" : "",
     onClick: () => {
       if (pathname.startsWith("/receipts")) {
         router.push(`/receipts?v=${Date.now()}`); // fuerza “cambio” y refetch

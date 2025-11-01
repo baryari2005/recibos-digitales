@@ -8,7 +8,7 @@ import { UserForm } from "@/components/users/UserForm";
 import { axiosInstance } from "@/lib/axios";
 import { RoleGate } from "@/components/auth/RoleGate";
 import { CenteredSpinner } from "@/components/CenteredSpinner";
-import { Asterisk, UserCog } from "lucide-react";
+import { Asterisk, Star, StarHalf, UserCog, UserPen } from "lucide-react";
 
 export default function EditUserPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,7 +72,7 @@ function EditUserContent({ id }: { id: string }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl flex items-center">
-            <UserCog className="mr-2" />Editar usuario  <Asterisk className="ml-4 w-4 h-4" />{initial.userId}
+            <UserPen className="mr-2" />Editar usuario  <Star className="ml-4 w-4 h-4" />Id: {initial.userId}
           </CardTitle>
         </CardHeader>
         <CardContent>

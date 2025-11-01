@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Calendar, ClipboardList, FileDown, FileSignature, FileText, FileUp, HelpCircle, Home, Import, Menu, Shield, UserRoundCog, Users,
+  Calendar, ClipboardList, FileDown, FileSearch2, FileSignature, FileText, FileUp, FileUpIcon, HelpCircle, Home, Import, Menu, Shield, UserRoundCog, Users,
   type LucideIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -13,8 +13,17 @@ import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import { CurrentUser } from "@/features/auth/types";
 import { useEffect } from "react";
 
+import {
+  IconImportarUsuarios,
+  IconExportarUsuarios,
+  IconSubirPdfRecibos,
+  IconSeguimientoRecibos,
+} from "@/components/icons/RecibosIcons";
+
+type SvgIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
 type NavIconProps = {
-  Icon: LucideIcon;
+  Icon: SvgIcon;
   href?: string;
   title?: string;
   active?: boolean;
@@ -102,22 +111,26 @@ export function Sidebar({ user }: SidebarProps) {
       <NavIcon Icon={Menu} title="Menú" btnSize={BTN} iconSize={ICO} disabled />
       <Separator className="my-2 bg-white/20 w-10" />
       <NavIcon Icon={Home} href="/" title="Inicio" active={pathname === "/"} btnSize={BTN} iconSize={ICO} />
-      <NavIcon
-        Icon={FileSignature}
-        title="Documentos"
-        active={pathname.startsWith("/receipts")}
-        btnSize={BTN}
-        iconSize={ICO}
-        onClick={() => {
-          if (pathname.startsWith("/receipts")) {
-            router.push(`/receipts?v=${Date.now()}`); // 👈 fuerza “cambio” de ruta
-          } else {
-            router.push("/receipts");
-          }
-        }}
-      />
-      <NavIcon Icon={ClipboardList} title="Vacaciones" btnSize={BTN} iconSize={ICO} disabled
-        disabledHint="Funcionalidad no implementada" />
+      {!isAdmin && (
+        <>
+          <NavIcon
+            Icon={FileSignature}
+            title="Documentos"
+            active={pathname.startsWith("/receipts")}
+            btnSize={BTN}
+            iconSize={ICO}
+            onClick={() => {
+              if (pathname.startsWith("/receipts")) {
+                router.push(`/receipts?v=${Date.now()}`); // 👈 fuerza “cambio” de ruta
+              } else {
+                router.push("/receipts");
+              }
+            }}
+          />
+          <NavIcon Icon={ClipboardList} title="Vacaciones" btnSize={BTN} iconSize={ICO} disabled
+            disabledHint="Funcionalidad no implementada" />
+        </>
+      )}
 
       {/* --- Sección Gestión (solo Admin) --- */}
       {isAdmin && (
@@ -125,31 +138,31 @@ export function Sidebar({ user }: SidebarProps) {
           <Separator className="my-2 bg-white/20 w-10" />
           <NavIcon
             Icon={Users}
-            href="/users"
+            href="/users/"
             title="ABM Usuarios"
-            active={pathname.startsWith("/users")}
+            active={pathname.endsWith("users")}
             btnSize={BTN}
             iconSize={ICO}
           />
           <NavIcon
-            Icon={FileUp}
+            Icon={IconImportarUsuarios}
             href="/users/import"
             title="Importar Usuarios"
-            active={pathname.startsWith("/users")}
+            active={pathname.endsWith("import")}
             btnSize={BTN}
-            iconSize={ICO}
+            iconSize={34}
           />
           <NavIcon
-            Icon={FileDown}
+            Icon={IconExportarUsuarios}
             href="/users/export"
             title="Exportar Usuarios"
-            active={pathname.startsWith("/users")}
+            active={pathname.endsWith("export")}
             btnSize={BTN}
-            iconSize={ICO}
+            iconSize={34}
           />
           <Separator className="my-2 bg-white/20 w-10" />
           <NavIcon
-            Icon={FileText}
+            Icon={FileUpIcon}
             href="/admin/docs"
             title="Subir PDF de recibos"
             active={pathname.startsWith("/admin/docs")}
@@ -158,9 +171,9 @@ export function Sidebar({ user }: SidebarProps) {
           />
           <Separator className="my-2 bg-white/20 w-10" />
           <NavIcon
-            Icon={FileText}
+            Icon={FileSearch2}
             href="/payroll/receipts"
-            title="Recibos de sueldo"
+            title="Seguimineto de Recibos"
             active={pathname.startsWith("/payroll/receipts")}
             btnSize={BTN}
             iconSize={ICO}
