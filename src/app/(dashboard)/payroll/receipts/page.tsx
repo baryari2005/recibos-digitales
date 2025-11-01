@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { FileText, Filter, LinkIcon, Users, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { FileText, Filter, LinkIcon, Users, CheckCircle2, AlertTriangle, Clock, FileSearch2, BrushCleaning, User, Dock, IdCard, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { axiosInstance } from "@/lib/axios"; // 👈 usamos axios, que ya trae cookies/headers
 
@@ -106,42 +106,46 @@ export default function PayrollReceiptsAdminPage() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 space-y-4">
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <FileText className="w-6 h-6" />
-            Recibos de Sueldo – Admin
+          <CardTitle className="text-2xl flex items-center">
+            <FileSearch2 className="w-6 h-6 mr-2" />
+            Seguimiento de Recibos Digitales
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="p-4 space-y-4">
           {/* Filtros */}
-          <div className="rounded border p-4">
+          <div className="space-y-2">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
               <div className="md:col-span-2">
-                <Label>Búsqueda</Label>
-                <Input
-                  placeholder="CUIL, nombre, apellido, email, userId…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
+                <Label className="mb-2">Búsqueda</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="CUIL, nombre, apellido, email, userId…"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    className="h-11 rounded border pr-3 pl-9"
+                  />
+                </div>
               </div>
               <div>
-                <Label>Desde (mes)</Label>
-                <Input type="month" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Label className="mb-2">Desde<p className="text-xs text-muted-foreground"> (mes)</p></Label>
+                <Input type="month" value={from} onChange={(e) => setFrom(e.target.value)} className="h-11 rounded border pr-3" />
               </div>
               <div>
-                <Label>Hasta (mes)</Label>
-                <Input type="month" value={to} onChange={(e) => setTo(e.target.value)} />
+                <Label className="mb-2">Hasta<p className="text-xs text-muted-foreground"> (mes)</p></Label>
+                <Input type="month" value={to} onChange={(e) => setTo(e.target.value)} className="h-11 rounded border pr-3" />
               </div>
               <div>
-                <Label>Estado</Label>
-                <Select value={status} onValueChange={(v: "all" | "signed" | "unsigned" | "disagreement") => setStatus(v)}>
-                  <SelectTrigger>
+                <Label className="mb-2">Estado</Label>
+                <Select value={status} onValueChange={(v: "all" | "signed" | "unsigned" | "disagreement") => setStatus(v)} >
+                  <SelectTrigger className="h-11 rounded border pr-3 w-full">
                     <SelectValue placeholder="Estado" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent >
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="signed">Firmado</SelectItem>
                     <SelectItem value="disagreement">Disconformidad</SelectItem>
@@ -152,7 +156,7 @@ export default function PayrollReceiptsAdminPage() {
             </div>
 
             <div className="mt-3 flex gap-2">
-              <Button onClick={applyFilters} disabled={loading} className="h-10">
+              <Button onClick={applyFilters} disabled={loading} className="h-11 rounded bg-[#008C93] hover:bg-[#007381]">
                 <Filter className="w-4 h-4 mr-2" />
                 Aplicar filtros
               </Button>
@@ -163,8 +167,9 @@ export default function PayrollReceiptsAdminPage() {
                   setTimeout(fetchData, 0);
                 }}
                 disabled={loading}
-                className="h-10"
+                className="h-11 rounded"
               >
+                <BrushCleaning className="w-4 h-4 mr-2" />
                 Limpiar
               </Button>
             </div>
@@ -216,7 +221,12 @@ export default function PayrollReceiptsAdminPage() {
                   const key = g.cuil;
                   const isOpen = openCuil[key] ?? true;
                   const fullName = [g.user?.apellido ?? "", g.user?.nombre ?? ""].join(" ").trim() || "(sin nombre)";
-                  const header = `${fullName} — ${g.cuil}`;
+                  const header = (
+                    <span className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      {fullName} <IdCard className="w-4 h-4 ml-6" /> {g.cuil}
+                    </span>
+                  );
                   return (
                     <div key={key}>
                       {/* Encabezado por usuario */}

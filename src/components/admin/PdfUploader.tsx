@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/stores/auth";
-import { Loader2, FileText, Upload } from "lucide-react";
+import { Loader2, FileText, Upload, UploadCloud, CircleFadingArrowUp } from "lucide-react";
 
 type SplitStats = {
   bucket: string;
@@ -98,8 +98,8 @@ export default function PdfUploader({
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle className="text-2xl flex items-center">
-            <FileText className="mr-2" />Subir PDF de recibos
-          </CardTitle>          
+            <CircleFadingArrowUp className="mr-2" />Subir PDF de recibos
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-4 space-y-4">
           {/* Período */}
@@ -127,7 +127,7 @@ export default function PdfUploader({
             />
             <div className="flex items-center gap-2">
               <Button type="button" className="h-11 rounded bg-[#008C93] hover:bg-[#007381]" onClick={pick}>
-                <Upload className="w-4 h-4"/> Elegir archivo
+                <Upload className="w-4 h-4" /> Elegir archivo
               </Button>
               <span className="text-xs text-muted-foreground">
                 {file ? file.name : "Ningún archivo seleccionado"}
@@ -147,7 +147,10 @@ export default function PdfUploader({
                   Subiendo y procesando...
                 </span>
               ) : (
-                "Subir y procesar"
+                <span className="inline-flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4" />
+                  Subir y Procesar Recibos
+                </span>
               )}
             </Button>
           </div>
