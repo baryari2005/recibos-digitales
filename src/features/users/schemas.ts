@@ -40,16 +40,21 @@ const isValidCuil = (v?: string) => {
 const cuilMatchesDni = (cuil?: string, dni?: string) => {
   const dc = onlyDigits(cuil || "");
   const dd = onlyDigits(dni || "");
-  if (!dc || !dd) return true; // si falta uno, no validar coincidencia
+  if (!dc || !dd) return true;
   if (dc.length !== 11) return true;
   return dc.slice(2, 10) === dd;
 };
 
 const isValidPhone = (v?: string) => {
-  if (v == null || v === "") return true; // opcional
+  if (v == null || v === "") return true;
   const ds = onlyDigits(v);
   return ds.length >= 8 && ds.length <= 15;
 };
+
+/* --- validador de fecha "yyyy-MM-dd" --- */
+const ymd = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato esperado yyyy-MM-dd");
 
 /* ------------- Campos base (SIN superRefine) ------------- */
 const BaseFields = z.object({
@@ -93,7 +98,9 @@ const BaseFields = z.object({
     .optional(),
   codigoPostal: z.string().max(20, "Máximo 20 caracteres").optional(),
 
-  fechaNacimiento: z.date().nullable().optional(),
+  // ⬇⬇⬇ CAMBIO CLAVE: aceptar string "yyyy-MM-dd" o null
+  fechaNacimiento: ymd.nullable().optional(),
+
   genero: z.enum(GENERO_OPCIONES).optional(),
   estadoCivil: z.enum(ESTADO_CIVIL_OPCIONES).optional(),
   nacionalidad: z.enum(NACIONALIDAD_VALUES).optional(),
@@ -102,7 +109,6 @@ const BaseFields = z.object({
 /* ----- cross-field checks (sin romper extend) ----- */
 const withCrossChecks = <T extends z.ZodTypeAny>(schema: T) =>
   (schema as any).superRefine((val: z.infer<typeof BaseFields>, ctx: z.RefinementCtx) => {
-    // CUIL ↔ DNI
     if (val.cuil && val.cuil !== "" && val.documento && val.documento !== "") {
       if (!cuilMatchesDni(val.cuil, val.documento)) {
         ctx.addIssue({

@@ -16,6 +16,20 @@ import type { UserFormValues } from "../types";
 
 type Mode = "create" | "edit";
 
+// ---- helpers fecha ----
+function toYmdUTC(d?: Date | null): string | null {
+  if (!d) return null;
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Type guard seguro para Date (evita TS2358)
+function isDateValue(v: unknown): v is Date {
+  return v instanceof Date && !isNaN(v.getTime());
+}
+
 export function useUserForm({
   mode,
   defaultValues,
@@ -23,7 +37,7 @@ export function useUserForm({
 }: {
   mode: Mode;
   defaultValues?: Partial<UserFormValues> & {
-    id?: string;                              // 👈 id solo en los defaults (no en el form)
+    id?: string;
     rol?: { id: number };
     fechaNacimiento?: string | Date | null;
   };
@@ -32,12 +46,14 @@ export function useUserForm({
   const schema = mode === "create" ? createUserSchema : editUserSchema;
 
   const derivedDefaults = useMemo<UserFormValues>(() => {
-    const fh =
-      defaultValues?.fechaNacimiento == null
-        ? null
-        : typeof defaultValues.fechaNacimiento === "string"
-          ? new Date(defaultValues.fechaNacimiento)
-          : defaultValues.fechaNacimiento;
+    const rawFN = defaultValues?.fechaNacimiento;
+
+    let fh: string | null = null;
+    if (typeof rawFN === "string") {
+      fh = rawFN;                         // ya "yyyy-MM-dd"
+    } else if (isDateValue(rawFN)) {
+      fh = toYmdUTC(rawFN);               // Date -> "yyyy-MM-dd"
+    } // si no, queda null
 
     return {
       userId: defaultValues?.userId ?? "",
@@ -59,7 +75,7 @@ export function useUserForm({
       codigoPostal: defaultValues?.codigoPostal ?? "",
 
       // Demográficos
-      fechaNacimiento: fh ?? null,
+      fechaNacimiento: fh, // string | null ("yyyy-MM-dd")
       genero: (defaultValues?.genero as UserFormValues["genero"]) ?? undefined,
       estadoCivil: (defaultValues?.estadoCivil as UserFormValues["estadoCivil"]) ?? undefined,
       nacionalidad: (defaultValues?.nacionalidad as UserFormValues["nacionalidad"]) ?? undefined,
@@ -72,37 +88,29 @@ export function useUserForm({
     mode: "onChange",
   });
 
-  // Rehidratar cuando llegan nuevos defaults (fetch)
   useEffect(() => {
     form.reset(derivedDefaults);
   }, [derivedDefaults, form]);
 
   const submitting = form.formState.isSubmitting;
-
   const { roles, loading: loadingRoles } = useRoles();
 
   const { tmpPath, setTmpPath, commit } = useAvatarStaging();
   const oldAvatarPath = pathFromPublicUrl(defaultValues?.avatarUrl || undefined);
 
-  // helpers
-  const toNull = (v: unknown) =>
-    v === "" || v === undefined ? null : (v as any);
+  const toNull = (v: unknown) => (v === "" || v === undefined ? null : (v as any));
 
   const onSubmit = async (values: UserFormValues) => {
     try {
       const emailNorm = values.email.trim().toLowerCase();
 
-      // Demográficos
       const payloadDemograficos = {
-        fechaNacimiento: values.fechaNacimiento
-          ? values.fechaNacimiento.toISOString()
-          : null,
+        fechaNacimiento: values.fechaNacimiento ?? null, // string | null
         genero: values.genero ?? null,
         estadoCivil: values.estadoCivil ?? null,
         nacionalidad: values.nacionalidad ?? null,
       };
 
-      // Identidad / contacto
       const payloadIdentidadContacto = {
         tipoDocumento: values.tipoDocumento ?? null,
         documento: toNull(values.documento?.trim()),
@@ -123,40 +131,31 @@ export function useUserForm({
         ...payloadIdentidadContacto,
       };
 
-      // En edit, si no hay nueva pass, no la envíes
       if (mode === "edit" && (!basePayload.password || !basePayload.password.trim())) {
         delete basePayload.password;
       }
 
       if (mode === "create") {
         const created = await createUser(basePayload);
-
         if (tmpPath) {
           try {
             const r = await commit(`users/${created.id}`);
             await updateUser(created.id, { avatarUrl: r.publicUrl });
-          } catch {
-            /* no cortar flujo por avatar */
-          }
+          } catch {}
         }
-
         toast.success("Usuario creado correctamente");
         onSuccess?.(created.id);
       } else {
-        const id = defaultValues?.id as string;     // 👈 usamos el id del recurso desde props
+        const id = defaultValues?.id as string;
         if (!id) throw new Error("Falta el id del usuario para actualizar");
 
         await updateUser(id, basePayload);
-
         if (tmpPath) {
           try {
             const r = await commit(`users/${id}`, oldAvatarPath);
             await updateUser(id, { avatarUrl: r.publicUrl });
-          } catch {
-            /* no cortar flujo por avatar */
-          }
+          } catch {}
         }
-
         toast.success("Usuario actualizado correctamente");
         onSuccess?.(id);
       }
@@ -168,7 +167,6 @@ export function useUserForm({
 
       toast.error(serverMsg);
 
-      // 409 → duplicados
       if (status === 409) {
         if (/email/i.test(serverMsg)) form.setError("email", { type: "server", message: "El email ya está registrado." });
         if (/userId/i.test(serverMsg)) form.setError("userId", { type: "server", message: "El usuario (userId) ya existe." });

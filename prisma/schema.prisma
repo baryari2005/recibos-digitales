@@ -120,7 +120,7 @@ model Usuario {
   nombre          String?
   apellido        String?
   avatarUrl       String?
-  fechaNacimiento DateTime?
+  fechaNacimiento DateTime? @db.Date
   genero          Genero?
   estadoCivil     EstadoCivil?
   nacionalidad    Nacionalidad?
@@ -146,8 +146,8 @@ model Legajo {
   id                  String        @id @default(uuid())
   usuarioId           String        @unique
   numeroLegajo        Int?          @unique
-  fechaIngreso        DateTime?
-  fechaEgreso         DateTime?
+  fechaIngreso        DateTime?     @db.Date
+  fechaEgreso         DateTime?     @db.Date
   estadoLaboral       EstadoLaboral @default(ACTIVO)
   tipoContrato        TipoContrato?
   puesto              String?
@@ -200,4 +200,67 @@ model PayrollReceipt {
   @@unique([cuil, period]) // 1 recibo por cuil+periodo
   @@index([cuil, periodDate])
   @@map("payroll_receipts") // nombre real de la tabla en DB
+}
+
+// enums
+enum LeaveType {
+  VACACIONES
+  ENFERMEDAD
+  CASAMIENTO
+  ESTUDIOS
+  EXCEDENCIA
+  FALLECIMIENTO
+  CON_GOCE
+  SIN_GOCE
+  MATERNIDAD
+  NACIMIENTO
+  SEMANA_EXTRA
+}
+
+enum LeaveStatus {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  CANCELADO
+}
+
+model LeaveRequest {
+  id             String      @id @default(cuid())
+  userId         String
+  type           LeaveType
+  status         LeaveStatus @default(PENDIENTE)
+  startYmd       String      // "YYYY-MM-DD"
+  endYmd         String
+  daysCount      Int
+  note           String?
+  approverId     String?
+  decidedAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relación opcional al catálogo
+  typeCatalogId  Int?
+  typeCatalog    LeaveTypeCatalog? @relation(fields: [typeCatalogId], references: [id])
+
+  // 🔹 Índices recomendados
+  @@index([userId, createdAt])         // listar historial del usuario (ordenado por fecha)
+  @@index([status, createdAt])         // vistas admin por estado
+  @@index([userId, startYmd])          // filtros por rango - inicio
+  @@index([userId, endYmd])            // filtros por rango - fin
+  @@index([typeCatalogId])             // join hacia catálogo (si lo usás)
+}
+
+model LeaveTypeCatalog {
+  id        Int       @id @default(autoincrement())
+  code      LeaveType @unique
+  label     String
+  colorHex  String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  requests  LeaveRequest[]
+
+  // 🔹 Para listar tipos activos rápido
+  @@index([isActive])
 }

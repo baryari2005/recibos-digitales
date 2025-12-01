@@ -32,11 +32,32 @@ const patchSchema = z.object({
   documento: z.string().nullable().optional(),
   cuil: z.string().nullable().optional(),
 
-  fechaNacimiento: z.coerce.date().nullable().optional(),
+  //fechaNacimiento: z.coerce.date().nullable().optional(),
+  fechaNacimiento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato esperado yyyy-MM-dd")
+    .nullable()
+    .optional(),
   genero: z.nativeEnum(Genero).nullable().optional(),
   estadoCivil: z.nativeEnum(EstadoCivil).nullable().optional(),
   nacionalidad: z.nativeEnum(Nacionalidad).nullable().optional(),
 });
+
+// 🔐 Siempre crear Date en UTC a partir de "yyyy-MM-dd"
+function ymdToUTCDate(ymd?: string | null): Date | null {
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1)); // 00:00 UTC
+}
+
+// 🔐 Siempre serializar a string leyendo campos UTC
+function toYmdUTC(d?: Date | null): string | null {
+  if (!d) return null;
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 // GET detalle
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -69,7 +90,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     documento: user.documento,
     cuil: user.cuil,
 
-    fechaNacimiento: user.fechaNacimiento,
+    //    fechaNacimiento: user.fechaNacimiento,
+    fechaNacimiento: toYmdUTC(user.fechaNacimiento),
     genero: user.genero,
     estadoCivil: user.estadoCivil,
     nacionalidad: user.nacionalidad,
@@ -111,7 +133,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if ("documento" in dto) data.documento = toNull(dto.documento);
     if ("cuil" in dto) data.cuil = toNull(dto.cuil);
 
-    if ("fechaNacimiento" in dto) data.fechaNacimiento = dto.fechaNacimiento ?? null;
+    //if ("fechaNacimiento" in dto) data.fechaNacimiento = dto.fechaNacimiento ?? null;
+    if ("fechaNacimiento" in dto) {
+      data.fechaNacimiento = ymdToUTCDate(dto.fechaNacimiento ?? null);
+    }
     if ("genero" in dto) data.genero = dto.genero ?? null;
     if ("estadoCivil" in dto) data.estadoCivil = dto.estadoCivil ?? null;
     if ("nacionalidad" in dto) data.nacionalidad = dto.nacionalidad ?? null;

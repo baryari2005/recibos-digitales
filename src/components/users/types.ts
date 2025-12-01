@@ -18,7 +18,7 @@ export type UserFormValues = {
   domicilio?: string;
   codigoPostal?: string;
 
-  fechaNacimiento?: Date | null;
+  fechaNacimiento?: string | null;
   genero?: "MASCULINO" | "FEMENINO" | "NO_BINARIO" | "PREFIERE_NO_DECIR" | "OTRO";
   estadoCivil?: "SOLTERO" | "CASADO" | "DIVORCIADO" | "VIUDO" | "UNION_CONVIVENCIAL" | "OTRO";
   nacionalidad?: typeof NACIONALIDAD_VALUES[number];

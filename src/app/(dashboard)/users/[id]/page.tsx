@@ -52,9 +52,10 @@ function EditUserContent({ id }: { id: string }) {
         celular: data.celular ?? "",
         domicilio: data.domicilio ?? "",
         codigoPostal: data.codigoPostal ?? "",
-        fechaNacimiento: data.fechaNacimiento
-          ? new Date(data.fechaNacimiento) // si viene ISO string
-          : null,
+        // fechaNacimiento: data.fechaNacimiento
+        //   ? new Date(data.fechaNacimiento) // si viene ISO string
+        //   : null,
+        fechaNacimiento: data.fechaNacimiento ?? null, 
         genero: data.genero ?? undefined,
         estadoCivil: data.estadoCivil ?? undefined,
         nacionalidad: data.nacionalidad ?? undefined,

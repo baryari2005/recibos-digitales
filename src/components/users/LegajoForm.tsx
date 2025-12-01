@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, type SubmitHandler, type Resolver, Controller } from "react-hook-form";
+import { useForm, type SubmitHandler, type Resolver, Controller, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
@@ -69,7 +69,7 @@ type Props = {
 
 export function LegajoForm({ defaultValues, onSubmit }: Props) {
   const form = useForm<LegajoValues>({
-    resolver: zodResolver(legajoSchema) as Resolver<LegajoValues>,
+    resolver: zodResolver(legajoSchema) as unknown as Resolver<LegajoValues>,
     defaultValues: {
       employeeNumber: defaultValues.employeeNumber ?? undefined,
       admissionDate: toInputDate(defaultValues.admissionDate),
@@ -80,7 +80,6 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
       area: defaultValues.area ?? "",
       department: defaultValues.department ?? "",
       category: defaultValues.category ?? "",
-      // matrículas (string vacío → schema lo normaliza a null)
       matriculaProvincial: defaultValues.matriculaProvincial ?? "",
       matriculaNacional: defaultValues.matriculaNacional ?? "",
       notes: defaultValues.notes ?? "",
@@ -98,8 +97,42 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
 
   const toUpper = (v: string) => v.trim().toUpperCase();
 
+  const onInvalid: SubmitErrorHandler<LegajoValues> = (errs) => {
+    console.group("❌ RHF onInvalid (LegajoForm)");
+    console.log("Errores:", errs);
+    const firstKey = Object.keys(errs)[0];
+    console.log("Primer campo con error:", firstKey);
+    console.groupEnd();
+  };
+
+const handleSubmitWithLogs = handleSubmit(
+  async (values) => {
+    console.group("✅ SUBMIT válido (LegajoForm)");
+    console.log("Payload:", values);
+    console.groupEnd();
+    await onSubmit(values);
+  },
+  (errs) => {
+    console.group("❌ RHF onInvalid (LegajoForm)");
+    console.log("Errores detectados:", errs);
+    console.log("Primer campo con error:", Object.keys(errs)[0]);
+    console.groupEnd();
+  }
+);
+
+  // Handler del submit con logs de depuración
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
+    <form
+      noValidate // 👈 desactiva validaciones del navegador
+      onSubmit={(e) => {
+        e.preventDefault(); // 👈 evita que el navegador bloquee el submit
+        console.log("🟢 Form SUBMIT event triggered");
+        handleSubmitWithLogs(e);
+      }}
+      className="grid gap-4 md:grid-cols-2"
+    >
+      
       {/* N° Legajo */}
       <div className="space-y-1">
         <Label>Legajo</Label>

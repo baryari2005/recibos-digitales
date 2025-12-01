@@ -72,6 +72,19 @@ const isValidPhone = (s?: string) => {
   return ds.length >= 8 && ds.length <= 15;
 };
 
+// Para la UI (Date local, solo para el Calendar/format)
+function fromYmdLocal(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1); // local midnight
+}
+
+function toYmdLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /* =============================================================== */
 
 export function UserFormFields({
@@ -83,7 +96,7 @@ export function UserFormFields({
   onTempAvatarUploaded,
 }: {
   mode: Mode;
-  form: UseFormReturn<UserFormValues>;
+  form: UseFormReturn<UserFormValues>; // asegurate que fechaNacimiento sea string | null
   roles: Array<{ id: number; nombre: string }>;
   loadingRoles: boolean;
   currentAvatarUrl?: string | null;
@@ -117,7 +130,7 @@ export function UserFormFields({
           className={cn(
             "h-11 rounded border pr-3",
             mode === "edit" &&
-              "bg-muted/50 cursor-not-allowed text-muted-foreground"
+            "bg-muted/50 cursor-not-allowed text-muted-foreground"
           )}
           onKeyDown={(e) => {
             if (mode === "edit") e.preventDefault();
@@ -140,9 +153,7 @@ export function UserFormFields({
           ) : (
             <>
               Nueva contraseña{" "}
-              <span className="text-xs text-muted-foreground">
-                (opcional)
-              </span>
+              <span className="text-xs text-muted-foreground">(opcional)</span>
             </>
           )}
         </Label>
@@ -469,38 +480,35 @@ export function UserFormFields({
         <Label>Fecha de nacimiento</Label>
         <Controller
           control={form.control}
-          name="fechaNacimiento"
-          render={({ field }) => (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  type="button"
-                  className="w-full justify-start h-11 rounded border"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {field.value ? (
-                    format(field.value, "dd/MM/yyyy", { locale: es })
-                  ) : (
-                    <span className="text-muted-foreground">
-                      Seleccionar fecha
-                    </span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={field.value ?? undefined}
-                  onSelect={(d) => field.onChange(d ?? null)}
-                  initialFocus
-                  captionLayout="dropdown"
-                  fromYear={1940}
-                  toYear={new Date().getFullYear()}
-                />
-              </PopoverContent>
-            </Popover>
-          )}
+          name="fechaNacimiento" // string | null "yyyy-MM-dd"
+          render={({ field }) => {
+            const raw = field.value as string | null | undefined;
+            const ymd = typeof raw === "string" ? raw : null; // el form guarda string
+            const dateValue = ymd ? fromYmdLocal(ymd) : undefined;
+
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" type="button" className="w-full justify-start h-11 rounded border">
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {dateValue ? format(dateValue, "dd/MM/yyyy", { locale: es }) : (
+                      <span className="text-muted-foreground">Seleccionar fecha</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateValue}
+                    onSelect={(d) => field.onChange(d ? toYmdLocal(d) : null)}
+                    captionLayout="dropdown"
+                    fromYear={1940}
+                    toYear={new Date().getFullYear()}
+                  />
+                </PopoverContent>
+              </Popover>
+            );
+          }}
         />
         {form.formState.errors.fechaNacimiento && (
           <p className="text-xs text-red-600">
@@ -546,4 +554,3 @@ export function UserFormFields({
     </div>
   );
 }
-
