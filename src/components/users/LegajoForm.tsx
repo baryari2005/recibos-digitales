@@ -21,24 +21,28 @@ import { Calendar } from "../ui/calendar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-/** Acepta "YYYY-MM-DD", ISO, o vacío y devuelve "YYYY-MM-DD" o "" */
+/** Acepta "YYYY-MM-DD", ISO, o vacío y devuelve "YYYY-MM-DD" o "" (local) */
 const toInputDate = (v?: string | null) => {
   if (!v) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; // ya viene bien
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; // ya viene en YMD
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "";
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
 
+/** Date -> "YYYY-MM-DD" usando hora local */
 const toYMD = (d: Date) => {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+
+/** "YYYY-MM-DD" -> Date en **hora local** (evitar 'Z'); usar las 12:00 para esquivar DST */
+const ymdToLocalDate = (s?: string | null) => (s ? new Date(`${s}T12:00:00`) : null);
 
 const ymdToUTCDate = (s?: string | null) => (s ? new Date(`${s}T00:00:00.000Z`) : null);
 
@@ -118,7 +122,8 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
           control={form.control}
           name="admissionDate"
           render={({ field }) => {
-            const selected = ymdToUTCDate(field.value);
+            //const selected = ymdToUTCDate(field.value);
+            const selected = ymdToLocalDate(field.value);
             return (
               <Popover>
                 <PopoverTrigger asChild>
@@ -133,6 +138,7 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
                   <Calendar
                     mode="single"
                     selected={selected ?? undefined}
+                    //onSelect={(d) => field.onChange(d ? toYMD(d) : null)}
                     onSelect={(d) => field.onChange(d ? toYMD(d) : null)}
                     initialFocus
                     captionLayout="dropdown"
