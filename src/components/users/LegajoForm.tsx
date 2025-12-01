@@ -159,7 +159,8 @@ export function LegajoForm({ defaultValues, onSubmit }: Props) {
           control={form.control}
           name="terminationDate"
           render={({ field }) => {
-            const selected = ymdToUTCDate(field.value);
+            //const selected = ymdToUTCDate(field.value);
+            const selected = ymdToLocalDate(field.value);
             return (
               <Popover>
                 <PopoverTrigger asChild>
