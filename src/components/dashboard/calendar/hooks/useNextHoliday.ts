@@ -4,22 +4,21 @@
 import { useEffect, useState } from "react";
 import { fetchHolidays, type Holiday } from "@/lib/holidays";
 
-function ymdUtc(d: Date) {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+function startOfLocalDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()); // 00:00 local
 }
-function fromYmdUtc(s: string) {
-  return new Date(`${s}T00:00:00.000Z`);
+
+function fromYmdLocal(s: string) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1); // 00:00 local
 }
 
 type Kind = "inamovible" | "trasladable" | "puente" | undefined;
 
 export type NextHoliday = {
-  base?: { name: string; date: Date; type?: Kind };            // p.ej. 24/11 Soberanía
-  nonWorking?: { name: string; date: Date; type?: Kind };       // p.ej. 21/11 Puente
-  daysUntilNonWorking: number;                                  // contador hasta el no laborable
+  base?: { name: string; date: Date; type?: Kind };
+  nonWorking?: { name: string; date: Date; type?: Kind };
+  daysUntilNonWorking: number;
 };
 
 export function useNextHoliday(country = "AR") {
@@ -31,25 +30,30 @@ export function useNextHoliday(country = "AR") {
     (async () => {
       try {
         setLoading(true);
+
+        // 👇 usar medianoche local (no UTC)
         const now = new Date();
-        const todayUtc = fromYmdUtc(ymdUtc(now));
-        const year = now.getUTCFullYear();
+        const todayLocal = startOfLocalDay(now);
+        const year = todayLocal.getFullYear();
 
         const [list1, list2] = await Promise.all([
           fetchHolidays(year, country),
           fetchHolidays(year + 1, country),
         ]);
+
         const all: (Holiday & { dateObj: Date })[] = [...list1, ...list2]
-          .map(h => ({ ...h, dateObj: fromYmdUtc(h.date) }))
-          .filter(h => h.dateObj.getTime() >= todayUtc.getTime())
+          // 👇 parsear fecha como local (no "T00:00Z")
+          .map(h => ({ ...h, dateObj: fromYmdLocal(h.date) }))
+          // 👇 comparar contra el inicio del día local
+          .filter(h => h.dateObj.getTime() >= todayLocal.getTime())
           .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
 
         if (!alive) return;
 
-        const base = all.find(h => h.type !== "puente"); // el feriado “causa”
-        // puente más cercano que ocurra antes (o el mismo día) del base
-        const bridge = all.find(h => h.type === "puente" && (!base || h.dateObj <= base.dateObj));
-        // el próximo no laborable es el primero en el tiempo (si hay puente antes, gana)
+        const base = all.find(h => h.type !== "puente");
+        const bridge = all.find(
+          h => h.type === "puente" && (!base || h.dateObj.getTime() <= base.dateObj.getTime())
+        );
         const nonWorking = bridge ?? all[0];
 
         if (!nonWorking) {
@@ -57,8 +61,11 @@ export function useNextHoliday(country = "AR") {
           return;
         }
 
-        const msPerDay = 24 * 60 * 60 * 1000;
-        const daysUntilNonWorking = Math.round((nonWorking.dateObj.getTime() - todayUtc.getTime()) / msPerDay);
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+        // Como ambas fechas son 00:00 local, el cociente es entero.
+        const daysUntilNonWorking = Math.floor(
+          (nonWorking.dateObj.getTime() - todayLocal.getTime()) / MS_PER_DAY
+        );
 
         setData({
           base: base ? { name: base.name, date: base.dateObj, type: base.type as Kind } : undefined,
