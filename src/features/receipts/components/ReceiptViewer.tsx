@@ -4,6 +4,20 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
 import type { Receipt } from "../../receipts/types";
 
+function getReceiptLabel(period: string) {
+  const p = (period || "").toUpperCase();
+  const parts = p.split("-");
+  const suffix = parts.length > 2 ? parts[parts.length - 1] : "";
+
+  const map: Record<string, string> = {
+    VAC: "Vacaciones",
+    SAC: "Aguinaldo",
+    BON: "Bono",
+  };
+
+  return map[suffix] ?? "Recibo mensual";
+}
+
 export function ReceiptViewer({
   selected,
   onSign,
@@ -21,7 +35,7 @@ export function ReceiptViewer({
       <div className="flex items-center justify-between p-3 border-b">
         <div>
           <div className="text-sm-plus font-semibold">
-            {selected ? `Recibo mensual — ${selected.period}` : "Sin selección"}
+            {selected ? `${getReceiptLabel(selected.period)} — ${selected.period}` : "Sin selección"}
           </div>
         </div>
 

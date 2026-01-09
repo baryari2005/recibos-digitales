@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Helpers
 function sanitize(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
@@ -17,6 +18,21 @@ function toDisplayPeriod(yyyyMm: string) {
   const [y, m] = yyyyMm.split("-");
   return `${m}-${y}`;
 }
+
+function typeSuffix(type: "SALARIO" | "VACACIONES" | "AGUINALDO" | "BONO") {
+  return type === "VACACIONES" ? "-VAC" : type === "AGUINALDO" ? "-SAC" : type === "BONO" ? "-BON" : "";
+}
+
+// folder de storage: "2025-08" o "2025-08-VAC"
+function toStoragePeriodFolder(yyyyMm: string, type: "SALARIO" | "VACACIONES" | "AGUINALDO" | "BONO") {
+  return `${yyyyMm}${typeSuffix(type)}`;
+}
+
+// period en DB: "08-2025" o "08-2025-VAC"
+function toDbPeriod(yyyyMm: string, type: "SALARIO" | "VACACIONES" | "AGUINALDO" | "BONO") {
+  return `${toDisplayPeriod(yyyyMm)}${typeSuffix(type)}`;
+}
+
 // 1° día del mes en UTC
 function toPeriodDateUtc(yyyyMm: string) {
   const [y, m] = yyyyMm.split("-").map(Number);
@@ -42,9 +58,19 @@ export async function POST(req: NextRequest) {
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // --- Body
-  const { path, period } = (await req.json().catch(() => ({}))) as { path?: string; period?: string };
+  const { path, period, receiptType } = (await req.json().catch(() => ({}))) as {
+    path?: string;
+    period?: string;
+    receiptType?: "SALARIO" | "VACACIONES" | "AGUINALDO" | "BONO";
+  };
+
   if (!path || !period) {
     return NextResponse.json({ error: "Falta path/period" }, { status: 400 });
+  }
+
+  const type = receiptType ?? "SALARIO";
+  if (!["SALARIO", "VACACIONES", "AGUINALDO", "BONO"].includes(type)) {
+    return NextResponse.json({ error: "receiptType inválido" }, { status: 400 });
   }
 
   // --- Supabase
@@ -114,7 +140,9 @@ export async function POST(req: NextRequest) {
   let uploaded = 0;
   const createdOrUpdatedIds: string[] = [];
 
-  const periodDisplay = toDisplayPeriod(period);     // "MM-YYYY"
+  //const periodDisplay = toDisplayPeriod(period);     // "MM-YYYY"
+  const periodDisplay = toDbPeriod(period, type);                // "MM-YYYY" o "MM-YYYY-VAC"
+  const periodFolder = toStoragePeriodFolder(period, type);      // "YYYY-MM" o "YYYY-MM-VAC"
   const periodDate = toPeriodDateUtc(period);        // Date
 
   for (const cuil of uniqueCuils) {
@@ -129,7 +157,7 @@ export async function POST(req: NextRequest) {
     // Archivo destino en Storage
     // Nota: para nombre de archivo usamos sanitize, para DB guardamos el CUIL "con guiones".
     const cuilForDb = cuil.replace(/[^\d-]/g, ""); // asegura formato "##-########-#"
-    const outPath = `payroll/${period}/${sanitize(cuilForDb)}.pdf`;
+    const outPath = `payroll/${periodFolder}/${sanitize(cuilForDb)}.pdf`;
 
     const up = await supa.storage.from(bucket).upload(outPath, ab, {
       contentType: "application/pdf",
@@ -177,7 +205,7 @@ export async function POST(req: NextRequest) {
     bucket,
     period,
     sourcePath: path,
-    prefixPath: `payroll/${period}/`,
+    prefixPath: `payroll/${periodFolder}/`,
     startedAt: new Date(startedAt).toISOString(),
     endedAt: new Date(endedAt).toISOString(),
     durationMs: endedAt - startedAt,

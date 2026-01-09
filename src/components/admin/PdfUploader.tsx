@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/stores/auth";
 import { Loader2, FileText, Upload, UploadCloud, CircleFadingArrowUp } from "lucide-react";
+import { Controller } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type SplitStats = {
   bucket: string;
@@ -28,6 +30,8 @@ type SplitStats = {
   sampleCuils: string[];
 };
 
+type ReceiptType = "SALARIO" | "VACACIONES" | "AGUINALDO" | "BONO";
+
 export default function PdfUploader({
   onUploaded,
 }: {
@@ -38,6 +42,7 @@ export default function PdfUploader({
   const [uploading, setUploading] = useState(false);
   const [period, setPeriod] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [stats, setStats] = useState<SplitStats | null>(null);
+  const [receiptType, setReceiptType] = useState<ReceiptType>("SALARIO");
   const { token } = useAuth();
 
   const pick = () => inputRef.current?.click();
@@ -74,7 +79,7 @@ export default function PdfUploader({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ path: uploadData.path, period }),
+        body: JSON.stringify({ path: uploadData.path, period, receiptType }),
       });
       const splitTxt = await splitRes.text();
       const splitData: SplitStats = splitTxt ? JSON.parse(splitTxt) : ({} as any);
@@ -113,6 +118,27 @@ export default function PdfUploader({
                 className="h-11 rounded border pr-3"
               />
             </div>
+          </div>
+
+          {/* Tipo de Recibo*/}          
+          <div className="space-y-2">
+            <Label>Tipo de recibo</Label>
+
+            <Select
+              value={receiptType}
+              onValueChange={(v) => setReceiptType(v as ReceiptType)}
+            >
+              <SelectTrigger className="h-11 rounded border w-full">
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="SALARIO">Recibo de sueldo</SelectItem>
+                <SelectItem value="VACACIONES">Vacaciones</SelectItem>
+                <SelectItem value="AGUINALDO">Aguinaldo</SelectItem>
+                <SelectItem value="BONO">Bono</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Archivo */}

@@ -6,6 +6,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, Check, Loader2 } from "lucide-react";
 import type { Receipt } from "../../receipts/types";
 
+function getReceiptLabel(period: string) {
+  const p = (period || "").toUpperCase();
+  const parts = p.split("-");
+  const suffix = parts.length > 2 ? parts[parts.length - 1] : "";
+
+  const map: Record<string, string> = {
+    VAC: "Vacaciones",
+    SAC: "Aguinaldo",
+    BON: "Bono",
+  };
+
+  return map[suffix] ?? "Recibo mensual";
+}
+
 export function ReceiptsList({
   list,
   loading,
@@ -40,7 +54,7 @@ export function ReceiptsList({
                   <div className="flex items-center gap-2">
                     <FileText className="w-6 h-6" />
                     <div className="flex-1">
-                      <div className="text-sm-plus font-medium">Recibo mensual</div>
+                      <div className="text-sm-plus font-medium">{getReceiptLabel(r.period)}</div>
                       <div className="text-xs text-muted-foreground">{r.period}</div>
                     </div>
                     {r.signed ? (
