@@ -74,6 +74,33 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+// axiosInstance.interceptors.response.use(
+//   (res) => res,
+//   (err) => {
+//     const status = err?.response?.status;
+//     const cfg = (err?.config ?? {}) as AxiosRequestConfigExt;
+//     const reqUrl: string = cfg?.url || "";
+
+//     if (cfg?.skipAuthRedirect) {
+//       return Promise.reject(err);
+//     }
+
+//     if (typeof window !== "undefined") {
+//       const isOnLogin = window.location.pathname === "/login";
+//       const loginCall = isLoginCall(reqUrl);
+//       if (status === 401 && !isOnLogin && !loginCall) {
+//         const here = window.location.pathname + window.location.search;
+//         const next = encodeURIComponent(here);
+//         const dest = `/login?next=${next}`;
+//         if (window.location.href !== dest) window.location.replace(dest);
+//         return new Promise(() => {}); // corta cadenas
+//       }
+//     }
+
+//     return Promise.reject(err);
+//   }
+// );
+
 axiosInstance.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -88,12 +115,23 @@ axiosInstance.interceptors.response.use(
     if (typeof window !== "undefined") {
       const isOnLogin = window.location.pathname === "/login";
       const loginCall = isLoginCall(reqUrl);
+
       if (status === 401 && !isOnLogin && !loginCall) {
+        console.warn("[AUTH] 401 detectado → logout");
+
+        // 🔥 1. limpiar token
+        setAuthToken(null);
+
+        // 🔔 2. avisar a toda la app
+        window.dispatchEvent(new Event("auth:logout"));
+
+        // 🔀 3. redirigir
         const here = window.location.pathname + window.location.search;
         const next = encodeURIComponent(here);
-        const dest = `/login?next=${next}`;
-        if (window.location.href !== dest) window.location.replace(dest);
-        return new Promise(() => {}); // corta cadenas
+        window.location.replace(`/login?next=${next}`);
+
+        // ⛔ cortar promesas
+        return new Promise(() => {});
       }
     }
 

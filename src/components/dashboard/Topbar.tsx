@@ -1,7 +1,5 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { Logo } from "../ui/logo";
 import Image from "next/image";
 import { UserMenu } from "@/components/account/UserMenu";

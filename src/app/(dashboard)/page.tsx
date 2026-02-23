@@ -11,6 +11,8 @@ import { usePendingDocuments } from "@/components/dashboard/hooks/usePendingDocu
 import { usePathname, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useVacationBalance } from "@/features/leaves/hooks/useVacationBalance";
+import { usePendingLeaves } from "@/features/leaves/hooks/usePendingLeaves";
 
 function fmt(d?: Date) {
   return d ? format(d, "dd/MM", { locale: es }) : "";
@@ -22,15 +24,78 @@ export default function DashboardPage() {
   const fullName = [user?.nombre, user?.apellido].filter(Boolean).join(" ").trim();
   const displayName = fullName || user?.userId || user?.email || "Usuario";
   const { count: pendingDocs, loading: loadingDocs } = usePendingDocuments();
+  const { balance, isLoading: loadingBalance } = useVacationBalance();
+  // const { count: pendingLeaves, loading: loadingLeaves } = usePendingLeaves();
+
+  const { count: pendingVacationLeaves, loading: loadingVacationLeaves } =
+    usePendingLeaves({ type: "VACACIONES" });
+
+  const { count: pendingOtherLeaves, loading: loadingOtherLeaves } =
+    usePendingLeaves({ type: "OTHER" });
+
+  const roleName = user?.rol?.nombre ?? "";
+
+  const isEmployee = roleName === "USUARIO";
+
+  const isAdmin = ["ADMIN", "RRHH", "ADMINISTRADOR"].includes(roleName);
 
   const router = useRouter();
   const pathname = usePathname();
 
   const baseStats: (Stat & { disabled?: boolean; disabledHint?: string })[] = [
-    { id: "absences", labelTop: "Ausencias", labelBottom: "Pendientes de aprobación", value: 0, iconName: "ClipboardList", disabled: true, disabledHint: "Funcionalidad no implementada" },
-    { id: "vacations", labelTop: "Vacaciones", labelBottom: "Días disponibles", value: 0, iconName: "Plane", disabled: true, disabledHint: "Funcionalidad no implementada" },];
+    // 🏖 VACACIONES
+    {
+      id: "vacations",
+      labelTop: "Vacaciones",
+      labelBottom: isEmployee
+        ? "Días disponibles"
+        : loadingVacationLeaves
+          ? "Cargando…"
+          : pendingVacationLeaves > 0
+            ? "Vacaciones pendientes de aprobación"
+            : "Sin pendientes",
+      value: isEmployee
+        ? loadingBalance
+          ? "—"
+          : balance?.available ?? 0
+        : pendingVacationLeaves,
+      iconName: "Sunrise",
+      highlight: isAdmin && pendingVacationLeaves > 0,
+      onClick: () => {
+        if (isAdmin) {
+          router.push("/admin/vacations?type=VACACIONES");
+        } else {
+          router.push("/vacations");
+        }
+      }
+    },
 
-  
+    // 📝 LICENCIAS
+    {
+      id: "licenses",
+      labelTop: "Licencias",
+      labelBottom: loadingOtherLeaves
+        ? "Cargando…"
+        : pendingOtherLeaves > 0
+          ? isAdmin
+            ? "Licencias pendientes de aprobación"
+            : "Pendientes de aprobación"
+          : "Sin pendientes",
+      value: pendingOtherLeaves,
+      iconName: "ClipboardList",
+      highlight: isAdmin && pendingOtherLeaves > 0,
+      // disabled: true,
+      // disabledHint: "Funcianalidad no implementada.",
+      onClick: () => {
+        if (isAdmin) {
+          router.push("/admin/licenses?type=OTHER");
+        } else {
+          router.push("/licenses");
+        }
+      }
+    }
+  ];
+
   const documentsStat: Stat = {
     id: "documents",
     labelTop: "Documentos",
@@ -41,7 +106,7 @@ export default function DashboardPage() {
         : "Sin pendientes",
     value: pendingDocs, // 0 o 1
     iconName: "FileSignature",
-    disabled: user?.rol?.id == 2 ? true :  false,
+    disabled: user?.rol?.id == 2 ? true : false,
     disabledHint: user?.rol?.id == 2 ? "Funcianalidad no disponible para usuario admin" : "",
     onClick: () => {
       if (pathname.startsWith("/receipts")) {

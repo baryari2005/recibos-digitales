@@ -1,6 +1,8 @@
 // prisma/seed.ts
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { DefaultArgs } from "@prisma/client/runtime/library";
 import bcrypt from "bcryptjs";
+import { seedLeaveTypes } from "./seed.leave-types";
 
 const prisma = new PrismaClient();
 
@@ -41,6 +43,8 @@ async function main() {
     include: { rol: true },
   });
 
+   await seedLeaveTypes(prisma);
+   
   console.log("✅ Seed OK");
   console.log("Rol admin:", adminRol);
   console.log("Usuario admin:", {
@@ -59,3 +63,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

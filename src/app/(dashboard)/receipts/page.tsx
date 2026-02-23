@@ -33,7 +33,7 @@ export default function MisDocumentosPage() {
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
             {/* Columna izquierda */}
-            <Card className="h-[calc(100vh-120px)] overflow-hidden">
+            <Card className="h-[calc(100vh-230px)] overflow-hidden">
               <CardContent className="p-0 h-full flex flex-col">
                 <div className="-mx-0 px-3 mb-2 h-11">
                   <ReceiptsTabs
@@ -54,7 +54,7 @@ export default function MisDocumentosPage() {
             </Card>
 
             {/* Columna derecha */}
-            <Card className="h-[calc(100vh-120px)] overflow-hidden">
+            <Card className="h-[calc(100vh-230px)] overflow-hidden">
               <CardContent className="p-0 h-full flex flex-col">
                 <ReceiptViewer
                   selected={selected}

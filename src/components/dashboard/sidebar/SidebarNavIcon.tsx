@@ -1,0 +1,111 @@
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+type SvgIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
+type Props = {
+  Icon: SvgIcon;
+  href?: string;
+  title?: string;
+  active?: boolean;
+  collapsed?: boolean;
+  badgeCount?: number;
+  highlight?: boolean;
+  onClick?: () => void;
+};
+
+export function SidebarNavIcon({
+  Icon,
+  href,
+  title,
+  active,
+  collapsed,
+  badgeCount,
+  highlight,
+  onClick,
+}: Props) {
+  const iconSize = collapsed ? 22 : 18;
+
+  const content = (
+    <div
+      className={`
+        relative flex items-center w-full
+        ${collapsed ? "justify-center" : "gap-3"}
+      `}
+    >
+      <Icon
+        style={{ width: iconSize, height: iconSize }}
+        strokeWidth={2}
+      />
+
+      {!collapsed && (
+        <span className="text-sm font-medium whitespace-nowrap">
+          {title}
+        </span>
+      )}
+
+      {badgeCount && badgeCount > 0 && (
+        <span
+          className={`
+            absolute
+            ${collapsed ? "-top-1 -right-1" : "right-3"}
+            bg-red-600
+            text-white
+            text-[10px]
+            px-1.5
+            py-0.5
+            rounded-full
+            font-semibold
+          `}
+        >
+          {badgeCount}
+        </span>
+      )}
+    </div>
+  );
+
+  const button = (
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      asChild={!!href}
+      className={`
+        relative w-full text-white
+        transition-all duration-200
+        ${collapsed
+          ? "flex items-center justify-center h-12 px-0"
+          : "flex items-center justify-start px-3 h-11"}
+        ${active ? "bg-white/15" : ""}
+        ${highlight
+          ? "bg-red-500/20 hover:bg-red-500/30"
+          : "hover:bg-white/10"}
+      `}
+    >
+      {href ? <Link href={href}>{content}</Link> : content}
+    </Button>
+  );
+
+  if (!collapsed) return button;
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent
+          side="right"
+          className="bg-black text-white text-xs px-2 py-1 rounded-md shadow-md"
+        >
+          {title}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}

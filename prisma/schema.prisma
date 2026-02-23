@@ -3,9 +3,145 @@ generator client {
 }
 
 datasource db {
-  provider     = "postgresql"
-  url          = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  
   relationMode = "prisma"
+}
+
+model Usuario {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  tipoDocumento TipoDocumento? @default(DNI)
+  documento     String?        @unique
+  cuil          String?        @unique
+  email         String         @unique
+  celular       String?
+  domicilio     String?
+  codigoPostal  String?
+
+  nombre          String?
+  apellido        String?
+  avatarUrl       String?
+  fechaNacimiento DateTime? @db.Date
+  genero          Genero?
+  estadoCivil     EstadoCivil?
+  nacionalidad    Nacionalidad?
+
+  password           String
+  mustChangePassword Boolean @default(false)
+
+  rolId Int
+  rol   Rol @relation(fields: [rolId], references: [id])
+
+  legajo Legajo?
+
+  // ✅ agregá esto
+  leaveRequests      LeaveRequest[]
+  vacationBalances   VacationBalance[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([rolId])
+  @@index([apellido, nombre])
+}
+
+model Legajo {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId           String        @unique @db.Uuid
+  numeroLegajo        Int?          @unique
+  fechaIngreso        DateTime?     @db.Timestamptz(6)
+  fechaEgreso         DateTime?     @db.Timestamptz(6)
+  estadoLaboral       EstadoLaboral @default(ACTIVO)
+  tipoContrato        TipoContrato?
+  puesto              String?
+  area                String?
+  departamento        String?
+  categoria           String?
+  matriculaProvincial String?
+  matriculaNacional   String?
+  observaciones       String?
+  createdAt           DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+  usuario             Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([estadoLaboral])
+  @@index([area, departamento])
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PayrollReceipt {
+  id                 String   @id @default(cuid())
+  cuil               String
+  period             String
+  periodDate         DateTime @db.Timestamptz(6)
+  filePath           String
+  fileUrl            String
+  signed             Boolean  @default(false)
+  signedDisagreement Boolean  @default(false)
+  observations       String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@unique([cuil, period])
+  @@index([cuil, periodDate])
+  @@map("payroll_receipts")
+}
+
+model LeaveRequest {
+  id         String      @id @default(cuid())
+  userId     String
+  user       Usuario?    @relation(fields: [userId], references: [id])
+
+  type       LeaveType
+  status     LeaveStatus @default(PENDIENTE)
+  startYmd   String
+  endYmd     String
+  daysCount  Int
+  note       String?
+  approverId String?
+  decidedAt  DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  typeCatalogId Int?
+  typeCatalog   LeaveTypeCatalog? @relation(fields: [typeCatalogId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([userId, startYmd])
+  @@index([userId, endYmd])
+  @@index([typeCatalogId])
+}
+
+model LeaveTypeCatalog {
+  id        Int            @id @default(autoincrement())
+  code      LeaveType      @unique
+  label     String
+  colorHex  String?
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  requests  LeaveRequest[]
 }
 
 enum Genero {
@@ -26,17 +162,16 @@ enum EstadoCivil {
 }
 
 enum Nacionalidad {
-  ARGENTINA @map("Argentina")
-  BRASIL    @map("Brasil")
-  URUGUAY   @map("Uruguay")
-  PARAGUAY  @map("Paraguay")
-  CHILE     @map("Chile")
-  BOLIVIA   @map("Bolivia")
-  PERU      @map("Perú")
-  ECUADOR   @map("Ecuador")
-  COLOMBIA  @map("Colombia")
-  VENEZUELA @map("Venezuela")
-
+  ARGENTINA            @map("Argentina")
+  BRASIL               @map("Brasil")
+  URUGUAY              @map("Uruguay")
+  PARAGUAY             @map("Paraguay")
+  CHILE                @map("Chile")
+  BOLIVIA              @map("Bolivia")
+  PERU                 @map("Perú")
+  ECUADOR              @map("Ecuador")
+  COLOMBIA             @map("Colombia")
+  VENEZUELA            @map("Venezuela")
   MEXICO               @map("México")
   GUATEMALA            @map("Guatemala")
   EL_SALVADOR          @map("El Salvador")
@@ -46,34 +181,29 @@ enum Nacionalidad {
   PANAMA               @map("Panamá")
   CUBA                 @map("Cuba")
   REPUBLICA_DOMINICANA @map("República Dominicana")
-
-  ESPANA      @map("España")
-  ITALIA      @map("Italia")
-  FRANCIA     @map("Francia")
-  ALEMANIA    @map("Alemania")
-  REINO_UNIDO @map("Reino Unido")
-  PORTUGAL    @map("Portugal")
-
-  ESTADOS_UNIDOS @map("Estados Unidos")
-  CANADA         @map("Canadá")
-
-  CHINA         @map("China")
-  JAPON         @map("Japón")
-  COREA_DEL_SUR @map("Corea del Sur")
-  INDIA         @map("India")
-  RUSIA         @map("Rusia")
-  UCRANIA       @map("Ucrania")
-
-  MARRUECOS @map("Marruecos")
-  NIGERIA   @map("Nigeria")
-  SUDAFRICA @map("Sudáfrica")
-  ARGELIA   @map("Argelia")
-  SENEGAL   @map("Senegal")
-
-  TURQUIA       @map("Turquía")
-  ISRAEL        @map("Israel")
-  AUSTRALIA     @map("Australia")
-  NUEVA_ZELANDA @map("Nueva Zelanda")
+  ESPANA               @map("España")
+  ITALIA               @map("Italia")
+  FRANCIA              @map("Francia")
+  ALEMANIA             @map("Alemania")
+  REINO_UNIDO          @map("Reino Unido")
+  PORTUGAL             @map("Portugal")
+  ESTADOS_UNIDOS       @map("Estados Unidos")
+  CANADA               @map("Canadá")
+  CHINA                @map("China")
+  JAPON                @map("Japón")
+  COREA_DEL_SUR        @map("Corea del Sur")
+  INDIA                @map("India")
+  RUSIA                @map("Rusia")
+  UCRANIA              @map("Ucrania")
+  MARRUECOS            @map("Marruecos")
+  NIGERIA              @map("Nigeria")
+  SUDAFRICA            @map("Sudáfrica")
+  ARGELIA              @map("Argelia")
+  SENEGAL              @map("Senegal")
+  TURQUIA              @map("Turquía")
+  ISRAEL               @map("Israel")
+  AUSTRALIA            @map("Australia")
+  NUEVA_ZELANDA        @map("Nueva Zelanda")
 }
 
 enum TipoTelefono {
@@ -106,103 +236,6 @@ enum TipoDocumento {
   CI
 }
 
-model Usuario {
-  id            String         @id @default(uuid())
-  userId        String         @unique
-  tipoDocumento TipoDocumento? @default(DNI)
-  documento     String?        @unique
-  cuil          String?        @unique
-  email         String         @unique
-  celular       String?
-  domicilio     String?
-  codigoPostal  String?
-
-  nombre          String?
-  apellido        String?
-  avatarUrl       String?
-  fechaNacimiento DateTime? @db.Date
-  genero          Genero?
-  estadoCivil     EstadoCivil?
-  nacionalidad    Nacionalidad?
-
-  password           String
-  mustChangePassword Boolean @default(false)
-
-  rolId Int
-
-  legajo Legajo?
-
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  rol Rol @relation(fields: [rolId], references: [id])
-
-  @@index([rolId])
-  @@index([apellido, nombre])
-}
-
-model Legajo {
-  id                  String        @id @default(uuid())
-  usuarioId           String        @unique
-  numeroLegajo        Int?          @unique
-  fechaIngreso        DateTime?     @db.Date
-  fechaEgreso         DateTime?     @db.Date
-  estadoLaboral       EstadoLaboral @default(ACTIVO)
-  tipoContrato        TipoContrato?
-  puesto              String?
-  area                String?
-  departamento        String?
-  categoria           String?
-  matriculaProvincial String?
-  matriculaNacional   String?
-  observaciones       String?
-
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([estadoLaboral])
-  @@index([area, departamento])
-}
-
-model Rol {
-  id       Int       @id @default(autoincrement())
-  nombre   String    @unique
-  usuarios Usuario[]
-}
-
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model PayrollReceipt {
-  id                 String   @id @default(cuid())
-  cuil               String
-  period             String // ej: "08-2025"
-  periodDate         DateTime // ej: 2025-08-01 00:00:00Z (primer día del mes)
-  filePath           String // p.ej: "docs/payroll/2025-08/20-23177200-7.pdf"
-  fileUrl            String // p.ej: "https://.../storage/v1/object/public/docs/payroll/2025-08/20-23177200-7.pdf"
-  signed             Boolean  @default(false)
-  signedDisagreement Boolean  @default(false)
-  observations       String?  @db.Text
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@unique([cuil, period]) // 1 recibo por cuil+periodo
-  @@index([cuil, periodDate])
-  @@map("payroll_receipts") // nombre real de la tabla en DB
-}
-
-// enums
 enum LeaveType {
   VACACIONES
   ENFERMEDAD
@@ -224,43 +257,19 @@ enum LeaveStatus {
   CANCELADO
 }
 
-model LeaveRequest {
-  id             String      @id @default(cuid())
-  userId         String
-  type           LeaveType
-  status         LeaveStatus @default(PENDIENTE)
-  startYmd       String      // "YYYY-MM-DD"
-  endYmd         String
-  daysCount      Int
-  note           String?
-  approverId     String?
-  decidedAt      DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+model VacationBalance {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Usuario  @relation(fields: [userId], references: [id])
 
-  // Relación opcional al catálogo
-  typeCatalogId  Int?
-  typeCatalog    LeaveTypeCatalog? @relation(fields: [typeCatalogId], references: [id])
+  year      Int
+  totalDays Int
+  usedDays  Int      @default(0)
 
-  // 🔹 Índices recomendados
-  @@index([userId, createdAt])         // listar historial del usuario (ordenado por fecha)
-  @@index([status, createdAt])         // vistas admin por estado
-  @@index([userId, startYmd])          // filtros por rango - inicio
-  @@index([userId, endYmd])            // filtros por rango - fin
-  @@index([typeCatalogId])             // join hacia catálogo (si lo usás)
-}
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-model LeaveTypeCatalog {
-  id        Int       @id @default(autoincrement())
-  code      LeaveType @unique
-  label     String
-  colorHex  String?
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  requests  LeaveRequest[]
-
-  // 🔹 Para listar tipos activos rápido
-  @@index([isActive])
+  @@unique([userId, year])
+  @@index([userId])
 }

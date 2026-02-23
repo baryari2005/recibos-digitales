@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, FileSignature, Gift, Palmtree, Plane } from "lucide-react";
+import { ClipboardList, FileSignature, Gift, Palmtree, Plane, Sunrise } from "lucide-react";
 import type { Stat as BaseStat } from "./types";
 
 type Stat = BaseStat & {
@@ -15,9 +15,10 @@ function resolveIcon(name: BaseStat["iconName"]) {
   switch (name) {
     case "FileSignature": return <FileSignature className="h-10 w-10" />;
     case "ClipboardList": return <ClipboardList className="h-10 w-10" />;
-    case "Plane":         return <Plane className="h-10 w-10" />;
-    case "Gift":          return <Gift className="h-10 w-10" />;
-    default:              return <Palmtree className="h-10 w-10" />;
+    case "Plane": return <Plane className="h-10 w-10" />;
+    case "Gift": return <Gift className="h-10 w-10" />;
+    case "Sunrise": return <Sunrise className="h-10 w-10" />;
+    default: return <Palmtree className="h-10 w-10" />;
   }
 }
 
@@ -25,7 +26,7 @@ type Density = "compact" | "normal";
 
 const DENSITY = {
   compact: { content: "px-3 py-2 h-14", iconPad: "p-1.5", top: "text-[18px]", bottom: "text-[13px]" },
-  normal:  { content: "p-4",             iconPad: "p-2",   top: "text-sm",       bottom: "text-xs"   },
+  normal: { content: "p-4", iconPad: "p-2", top: "text-sm", bottom: "text-xs" },
 } as const;
 
 // Wrapper que SOLO agrega "manito" si es clickeable; mantiene deshabilitados tal cual
@@ -33,8 +34,8 @@ function ActionWrapper({ stat, children }: { stat: Stat; children: React.ReactNo
   const disabled = !!stat.disabled;
   const clickable = !disabled && (Boolean(stat.onClick) || Boolean(stat.href));
   const cursor = disabled ? "cursor-not-allowed"
-                : clickable ? "cursor-pointer"
-                : "cursor-default";
+    : clickable ? "cursor-pointer"
+      : "cursor-default";
 
   if (stat.onClick && !disabled) {
     return (
@@ -75,9 +76,16 @@ export function StatsPanel({
         return (
           <Card
             key={s.id}
-            className={`relative border shadow-sm mb-3 ${disabled ? "opacity-60 grayscale" : ""}`}
+            className={`
+              relative border shadow-sm mb-3 transition-all duration-300
+              ${disabled ? "opacity-60 grayscale" : ""}
+              ${s.highlight ? "border-red-500 shadow-red-500/20 shadow-lg" : ""}
+            `}
             aria-disabled={disabled}
           >
+            {s.highlight && (
+              <span className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+            )}
             {/* Overlay y “difuminado” SIGUEN IGUAL para no implementados */}
             {disabled && (
               <div className="pointer-events-none absolute inset-0 rounded-lg bg-muted/50 backdrop-blur-[1px] flex items-center justify-center">
