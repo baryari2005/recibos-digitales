@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/server-auth";
+import { requireAdmin } from "@/lib/authz";
 
 export async function GET(req: NextRequest) {
-  const user = await requireAuth(req);
-
-  if (!["ADMIN", "RRHH", "ADMINISTRADOR"].includes(user.rol.nombre)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.res;
 
   const users = await prisma.usuario.findMany({
     select: {

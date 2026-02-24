@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { LeaveStatus } from "@prisma/client";
-import { requireAuth } from "@/lib/server-auth";
+import { requireAdmin } from "@/lib/authz";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(
   req: NextRequest,
-  { params }: Ctx 
+  { params }: Ctx
 ) {
   try {
-    const user = await requireAuth(req);
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.res;
 
-    if (!["ADMIN", "RRHH", "ADMINISTRADOR"].includes(user.rol.nombre)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const userId = auth.me?.user?.id;
 
     const { id } = await params;
     const { reason } = await req.json();
@@ -39,7 +38,7 @@ export async function POST(
       data: {
         status: LeaveStatus.RECHAZADO,
         note: reason,
-        approverId: user.id,
+        approverId: userId,
         decidedAt: new Date(),
       },
     });

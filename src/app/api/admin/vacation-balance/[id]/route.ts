@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/server-auth";
+import { requireAdmin } from "@/lib/authz";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const user = await requireAuth(req);
-
-    if (!["ADMIN", "RRHH", "ADMINISTRADOR"].includes(user.rol.nombre)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.res;
 
     const { id } = await params;
     const { totalDays } = await req.json();
@@ -33,11 +30,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   try {
-    const user = await requireAuth(req);
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.res;
 
-    if (!["ADMIN", "RRHH", "ADMINISTRADOR"].includes(user.rol.nombre)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
     const { id } = await params;
 

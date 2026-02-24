@@ -1,16 +1,14 @@
 // src/app/api/admin/vacation-balance/bulk/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/server-auth";
 import { calcVacationDays } from "@/features/leaves/domain/calcVacationDays";
+import { requireAdmin } from "@/lib/authz";
 
 export async function POST(req: NextRequest) {
     try {
-        const user = await requireAuth(req);
+        const auth = await requireAdmin(req);
+        if (!auth.ok) return auth.res;
 
-        if (!["ADMIN", "RRHH", "ADMINISTRADOR"].includes(user.rol.nombre)) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
 
         const year = new Date().getFullYear();
         //const BASE_DAYS = 14;

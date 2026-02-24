@@ -8,10 +8,15 @@ type AuthResult = AuthOk | AuthFail;
 
 function maskAuthHeader(h?: string | null) {
   if (!h) return "none";
-  // no imprimimos el token completo
   if (h.length <= 14) return h;
   return `${h.slice(0, 10)}…${h.slice(-4)}`;
 }
+
+const norm = (v?: string | null) => (v ?? "").trim().toUpperCase();
+
+// 👇 ajustá estos ids según tu tabla
+const ADMIN_ROLE_IDS = new Set<number>([2, 4]); // ADMINISTRADOR y admin
+const ADMIN_ROLE_NAMES = new Set<string>(["ADMIN", "ADMINISTRADOR", "RRHH"]);
 
 export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
   const authz = req.headers.get("authorization");
@@ -20,12 +25,25 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
 
   try {
     const me = await getServerMe(req);
-    const userId = me?.user?.id;
-    const roleName = me?.user?.rol?.nombre?.toLowerCase();
 
-    console.log("[authz] getServerMe -> user?", !!me?.user, "userId:", userId, "role:", roleName);
+    const user = me?.user;
+    const userId = user?.id;
 
-    if (!me?.user) {
+    const roleId = Number(user?.rol?.id ?? 0);       // 👈 ID numérico (2,4,...)
+    const roleName = norm(user?.rol?.nombre);        // 👈 "ADMINISTRADOR", "ADMIN", etc.
+
+    console.log(
+      "[authz] getServerMe -> user?",
+      !!user,
+      "userId:",
+      userId,
+      "roleId:",
+      roleId,
+      "roleName:",
+      roleName
+    );
+
+    if (!user) {
       return {
         ok: false,
         res: NextResponse.json(
@@ -35,11 +53,13 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
       };
     }
 
-    if (roleName !== "admin" && roleName != "administrador") {
+    const isAdmin = ADMIN_ROLE_IDS.has(roleId) || ADMIN_ROLE_NAMES.has(roleName);
+
+    if (!isAdmin) {
       return {
         ok: false,
         res: NextResponse.json(
-          { error: "FORBIDDEN", reason: "role_not_allowed", role: roleName },
+          { error: "FORBIDDEN", reason: "role_not_allowed", roleId, roleName },
           { status: 403 }
         ),
       };
