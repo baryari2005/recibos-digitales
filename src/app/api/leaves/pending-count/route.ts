@@ -3,6 +3,13 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server-auth";
 import { LeaveStatus, LeaveType } from "@prisma/client";
 
+
+const norm = (v?: string | null) => (v ?? "").trim().toUpperCase();
+
+// ids según tu tabla
+const ADMIN_ROLE_IDS = new Set<number>([2, 4]);
+const ADMIN_ROLE_NAMES = new Set<string>(["ADMIN", "RRHH", "ADMINISTRADOR"]);
+
 export async function GET(req: NextRequest) {
   try {
     const user = await requireAuth(req);
@@ -10,8 +17,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const typeParam = searchParams.get("type");
 
-    const roleName = user?.rol?.nombre ?? "";
-    const isAdmin = ["ADMIN", "RRHH", "ADMINISTRADOR"].includes(roleName);
+    const roleId = Number(user?.rol?.id ?? 0);
+    const roleName = norm(user?.rol?.nombre);
+
+    const isAdmin = ADMIN_ROLE_IDS.has(roleId) || ADMIN_ROLE_NAMES.has(roleName);
 
     const where: any = {
       status: LeaveStatus.PENDIENTE,

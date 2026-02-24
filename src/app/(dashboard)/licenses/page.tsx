@@ -5,19 +5,23 @@ import { ClipboardList } from "lucide-react";
 import { VacationRequestPanel } from "@/features/leaves/ui/VacationRequestPanel";
 import { VacationHistoryPanel } from "@/features/leaves/ui/VacationHistoryPanel";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
-// import { AdminPendingLeavesPanel } from "@/features/leaves/ui/AdminPendingLeavesPanel";
 import { useState } from "react";
 import { redirect } from "next/navigation";
 
+
+const norm = (v?: string | null) => (v ?? "").trim().toUpperCase();
+
+const ADMIN_ROLE_IDS = new Set<number>([2, 4]);
+const ADMIN_ROLE_NAMES = new Set<string>(["ADMIN", "RRHH", "ADMINISTRADOR"]);
 
 export default function LicensesPage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const { user } = useCurrentUser();
 
-  const isApprover =
-    ["ADMIN", "RRHH", "ADMINISTRADOR"].includes(
-      user?.rol?.nombre ?? ""
-    );
+  const roleId = Number(user?.rol?.id ?? 0);
+  const roleName = norm(user?.rol?.nombre);
+
+  const isApprover = ADMIN_ROLE_IDS.has(roleId) || ADMIN_ROLE_NAMES.has(roleName);
 
   // Sacar cuando le demos la solucion
   redirect("/coming-soon");

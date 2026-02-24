@@ -11,8 +11,6 @@ export async function getBearer(req: NextRequest) {
 export async function getServerMe(req: NextRequest) {
   const token = await getBearer(req);
 
-  
-
   if (!token) return { user: null };
   try {
     const payload = await verifyJwt(token); // { uid, rid?, rname? }
