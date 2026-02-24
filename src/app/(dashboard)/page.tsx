@@ -33,11 +33,17 @@ export default function DashboardPage() {
   const { count: pendingOtherLeaves, loading: loadingOtherLeaves } =
     usePendingLeaves({ type: "OTHER" });
 
-  const roleName = user?.rol?.nombre ?? "";
+  const roleId = Number(user?.rol?.id ?? 0);        // por si en prod viene "2" como string
+  const roleName = (user?.rol?.nombre ?? "").trim().toUpperCase();
 
-  const isEmployee = roleName === "USUARIO";
+  const EMPLOYEE_ROLE_ID = 1; // USUARIO
+  const ADMIN_ROLE_IDS = new Set<number>([2, 4]);   // ADMINISTRADOR y admin
 
-  const isAdmin = ["ADMIN", "RRHH", "ADMINISTRADOR"].includes(roleName);
+  const isEmployee = roleId === EMPLOYEE_ROLE_ID || roleName === "USUARIO";
+  const isAdmin = ADMIN_ROLE_IDS.has(roleId) || ["ADMIN", "RRHH", "ADMINISTRADOR"].includes(roleName);
+
+  console.log("roleName(prod):", roleName, "len:", roleName?.length);
+  console.log("roleCode(prod):", roleId);
 
   const router = useRouter();
   const pathname = usePathname();
