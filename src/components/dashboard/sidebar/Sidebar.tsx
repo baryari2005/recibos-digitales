@@ -14,6 +14,7 @@ import {
     SunriseIcon,
     UserCog,
     Import,
+    FileUpIcon,
 } from "lucide-react";
 
 import { SidebarNavIcon } from "./SidebarNavIcon";
@@ -124,7 +125,7 @@ export function Sidebar({ user, collapsed, setCollapsed }: Props) {
 
                     <SidebarNavIcon
                         Icon={ClipboardList}
-                        href="/licenses"                        
+                        href="/licenses"
                         title="Licencias"
                         active={pathname.startsWith("/licenses")}
                         collapsed={collapsed}
@@ -151,19 +152,25 @@ export function Sidebar({ user, collapsed, setCollapsed }: Props) {
                         active={pathname.endsWith("import")}
                         collapsed={collapsed}
                     />
-                    
+
                     <SidebarNavIcon
                         Icon={ExportIcon}
                         href="/users/export"
                         title="Exportar"
                         active={pathname.endsWith("export")}
                         collapsed={collapsed}
-                    /> 
-                    
+                    />
+
 
                     <Separator className="bg-white/20" />
                     <SidebarSection label="Gestión Recibos y Vacaciones" collapsed={collapsed} />
-
+                    <SidebarNavIcon
+                        Icon={FileUpIcon}
+                        href="/admin/docs"
+                        title="Subir PDF de recibos"
+                        active={pathname.startsWith("/admin/docs")}
+                        collapsed={collapsed}
+                    />
                     <SidebarNavIcon
                         Icon={FileSearch2}
                         href="/payroll/receipts"
