@@ -39,6 +39,8 @@ export function VacationRequestPanel({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [daysCount, setDaysCount] = useState(0);
+
   const { refresh: refreshBalance } = useVacationBalance();
   const { refresh } = useLeaves();
 
@@ -57,8 +59,10 @@ export function VacationRequestPanel({
   const pending = hasPendingVacation ? pendingVacations[0] : null;
   const disableFlow = isVacation && hasPendingVacation;
 
-  const isValidRange =
-    !!range?.from && !!range?.to && calcLeaveDays(range.from, range.to) > 0;
+  // const isValidRange =
+  //   !!range?.from && !!range?.to && calcLeaveDays(range.from, range.to) > 0;
+
+  const isValidRange = !!range?.from && !!range?.to && daysCount > 0;
 
   function resetAll() {
     setStep(fixedType ? 2 : 1);
@@ -89,7 +93,8 @@ export function VacationRequestPanel({
         type: effectiveType,
         startYmd: range.from.toISOString().slice(0, 10),
         endYmd: range.to.toISOString().slice(0, 10),
-        daysCount: calcLeaveDays(range.from, range.to),
+        // daysCount: calcLeaveDays(range.from, range.to),
+        daysCount: daysCount,
         note,
       });
 
@@ -189,7 +194,15 @@ export function VacationRequestPanel({
           />
         )}
 
-        {step === 2 && <LeaveCalendarStep value={range} onChange={setRange} />}
+        {/* {step === 2 && <LeaveCalendarStep value={range} onChange={setRange} />} */}
+        {step === 2 && (
+          <LeaveCalendarStep
+            value={range}
+            onChange={setRange}
+            type={effectiveType}
+            onDaysChange={setDaysCount}
+          />
+        )}
 
         {step === 3 && <LeaveNotesStep value={note} onChange={setNote} />}
 
@@ -198,7 +211,8 @@ export function VacationRequestPanel({
             <p><strong>Tipo:</strong> {effectiveType}</p>
             <p><strong>Desde:</strong> {range?.from?.toLocaleDateString()}</p>
             <p><strong>Regreso:</strong> {range?.to?.toLocaleDateString()}</p>
-            <p><strong>Días:</strong>{" "}{range?.from && range?.to ? calcLeaveDays(range.from, range.to) : 0}</p>
+            {/* <p><strong>Días:</strong>{" "}{range?.from && range?.to ? calcLeaveDays(range.from, range.to) : 0}</p> */}
+            <p><strong>Días:</strong>{daysCount}</p>
           </div>
         )}
 
