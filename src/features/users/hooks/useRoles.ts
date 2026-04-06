@@ -1,9 +1,9 @@
 // src/features/users/hooks/useRoles.ts
 "use client";
 import { useEffect, useState } from "react";
-import { listRoles } from "../api";
-import type { Role } from "../types";
+import { listRoles } from "../services/api.service";
 import { toast } from "sonner";
+import { Role } from "../types/types";
 
 export function useRoles() {
   const [roles, setRoles] = useState<Role[]>([]);

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/authz";
+import { requireAuth, requirePermission } from "@/lib/server-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const auth = await requireAdmin(req);
-    if (!auth.ok) return auth.res;
+    const loggedInUser = await requireAuth(req);
+    requirePermission(loggedInUser, "vacaciones", "asignar");
 
     const { id } = await params;
     const { totalDays } = await req.json();
@@ -18,21 +18,24 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  catch (error: unknown) {
+    if (error instanceof Error) {
+      if (error?.message === "UNAUTHORIZED") {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
-
-    console.error("[UPDATE_VACATION_BALANCE]", e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   try {
-    const auth = await requireAdmin(req);
-    if (!auth.ok) return auth.res;
-
+    const loggedInUser = await requireAuth(req);
+    requirePermission(loggedInUser, "vacaciones", "asignar");
 
     const { id } = await params;
 
@@ -42,12 +45,16 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  catch (error: unknown) {
+    if (error instanceof Error) {
+      if (error?.message === "UNAUTHORIZED") {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
-
-    console.error("[DELETE_VACATION_BALANCE]", e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

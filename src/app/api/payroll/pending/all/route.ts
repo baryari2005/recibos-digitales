@@ -25,6 +25,39 @@ type ReceiptRow = Prisma.PayrollReceiptGetPayload<{
   };
 }>;
 
+type ServerMeUser = {
+  id?: string | null;
+  cuil?: string | null;
+  cuilNumero?: string | null;
+};
+
+function getSafeUser(value: unknown): ServerMeUser | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (!("user" in value)) {
+    return null;
+  }
+
+  const user = (value as { user?: unknown }).user;
+
+  if (!user || typeof user !== "object") {
+    return null;
+  }
+
+  const candidate = user as Record<string, unknown>;
+
+  return {
+    id: typeof candidate.id === "string" ? candidate.id : null,
+    cuil: typeof candidate.cuil === "string" ? candidate.cuil : null,
+    cuilNumero:
+      typeof candidate.cuilNumero === "string"
+        ? candidate.cuilNumero
+        : null,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -32,10 +65,12 @@ export async function GET(req: NextRequest) {
     const limitParam = Math.max(1, Math.min(500, Number(searchParams.get("limit") ?? 100)));
 
     const me = await getServerMe(req);
+    const user = getSafeUser(me);
+
     const userId = me?.user?.id;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    
-    const rawCuil = (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
+
+    const rawCuil = user?.cuil || user?.cuilNumero;
     if (!rawCuil) return NextResponse.json({ error: "CUIL no configurado en tu perfil." }, { status: 400 });
 
     const cuil = cuilDashed(rawCuil);
@@ -85,7 +120,9 @@ export async function GET(req: NextRequest) {
         })
       ),
     });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return NextResponse.json({ ok: false, error: error?.message || "Error" }, { status: 500 });
+    }
   }
 }

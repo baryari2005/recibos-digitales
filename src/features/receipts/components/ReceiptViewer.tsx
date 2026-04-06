@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
-import type { Receipt } from "../../receipts/types";
+import { AlertTriangle, ExternalLink, File, Loader2 } from "lucide-react";
+import type { Receipt } from "../types/types";
+import { useCan } from "@/hooks/useCan";
 
 function getReceiptLabel(period: string) {
   const p = (period || "").toUpperCase();
@@ -30,12 +31,15 @@ export function ReceiptViewer({
   const key = selected ? `${selected.id}:${selected.viewVersion ?? new Date(selected.updatedAt).getTime()}` : "none";
   const src = selected?.viewUrl ?? undefined;
 
+  const canSign = useCan("recibos", "firmar"); 
+
   return (
     <div className="p-0 h-full flex flex-col">
       <div className="flex items-center justify-between p-3 border-b">
         <div>
-          <div className="text-sm-plus font-semibold">
-            {selected ? `${getReceiptLabel(selected.period)} — ${selected.period}` : "Sin selección"}
+          <div className="text-sm-plus font-semibold flex items-center">
+            <File className="w-4 h-4 mr-2"/>
+            {selected ? `${getReceiptLabel(selected.period)} — ${selected.period}` : "No hay documentos seleccionados"}
           </div>
         </div>
 
@@ -51,7 +55,7 @@ export function ReceiptViewer({
             </Button>
           )}
 
-          {!selected?.signed && selected && (
+          {!selected?.signed && selected && canSign && (
             <>
               <Button
                 size="sm"

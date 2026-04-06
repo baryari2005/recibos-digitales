@@ -7,16 +7,23 @@ type ParsedRow = {
   cuil: string | null;
   apellidoNombre: string | null;
   legajo: string | null;
-  fechaIngreso: string | null; // yyyy-mm-dd
-  obraSocial: string | null;  
+  fechaIngreso: string | null;
+  obraSocial: string | null;
 };
 
-// ---------- helpers ----------
+type PdfParseResult = {
+  text?: string;
+};
+
+type PdfParseFn = (buffer: Buffer) => Promise<PdfParseResult>;
+
 const toYmd = (s?: string | null) => {
   if (!s) return null;
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
+
+  const match = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const [, dd, mm, yyyy] = match;
   return `${yyyy}-${mm}-${dd}`;
 };
 
@@ -25,58 +32,74 @@ function parseBlock(text: string): ParsedRow {
     (text.match(/C\.U\.I\.L\.\s*:\s*([\d]{2}-?[\d]{8}-?[\d])/i)?.[1] ?? null)
       ?.replace(/\D/g, "") ?? null;
 
-  const nameLine = text.match(/([A-ZÁÉÍÓÚÑ ]+)\s+(\d{1,6})\s+(\d{2}\/\d{2}\/\d{4})/);
+  const nameLine = text.match(
+    /([A-ZÁÉÍÓÚÑ ]+)\s+(\d{1,6})\s+(\d{2}\/\d{2}\/\d{4})/
+  );
+
   const apellidoNombre = nameLine?.[1]?.trim().replace(/\s+/g, " ") ?? null;
   const legajo = nameLine?.[2] ?? null;
   const fechaIngreso = toYmd(nameLine?.[3] ?? null);
 
-  const obraSocial = text.match(/Obra Social:\s*([A-Z0-9\.\s]+?)(?:\s{2,}|$)/i)?.[1]?.trim() ?? null;
+  const obraSocial =
+    text.match(/Obra Social:\s*([A-Z0-9\.\s]+?)(?:\s{2,}|$)/i)?.[1]?.trim() ??
+    null;
 
   return { cuil, apellidoNombre, legajo, fechaIngreso, obraSocial };
 }
 
-// ---------- route ----------
+function isFile(value: FormDataEntryValue): value is File {
+  return value instanceof File;
+}
+
 export async function POST(req: NextRequest) {
-  // 1) Traer archivos del form
   const form = await req.formData();
-  const files = form.getAll("files").filter(Boolean) as File[];
+  const files = form.getAll("files").filter(isFile);
+
   if (!files.length) {
-    return NextResponse.json({ message: "Subí al menos un PDF" }, { status: 400 });
+    return NextResponse.json(
+      { message: "Subí al menos un PDF" },
+      { status: 400 }
+    );
   }
 
-  // 2) Importar pdf-parse *correctamente* (evita resoluciones raras)
-  //    y sin leer ningún archivo del disco.
-  //    Si usás TypeScript, agregá una *.d.ts* (ver paso 2).
-  const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default as any;
+  const pdfParseModule = await import("pdf-parse/lib/pdf-parse.js");
+  const pdfParse = pdfParseModule.default as PdfParseFn;
 
   const out: ParsedRow[] = [];
 
   for (const file of files) {
-    // Asegurate de usar el binario subido por el usuario
-    const ab = await file.arrayBuffer();
-    const buf = Buffer.from(ab);
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    // 3) Parsear el PDF desde el buffer (nada de paths locales)
-    const parsed = await pdfParse(buf);
-    const raw = String(parsed.text || "");
+    const parsed = await pdfParse(buffer);
+    const raw = String(parsed.text ?? "");
 
-    // 4) Heurística: cortar por “C.U.I.L.:”
     const blocks = raw
       .split(/C\.U\.I\.L\.\s*:/i)
-      .map((b, i) => (i === 0 ? b : "C.U.I.L.:" + b));
+      .map((block, index) => (index === 0 ? block : `C.U.I.L.:${block}`));
 
-    for (const b of blocks) {
-      if (/C\.U\.I\.L\./i.test(b) && /APELLIDO Y NOMBRE|[A-ZÁÉÍÓÚÑ ]+\s+\d{1,6}\s+\d{2}\/\d{2}\/\d{4}/.test(b)) {
-        out.push(parseBlock(b));
+    for (const block of blocks) {
+      if (
+        /C\.U\.I\.L\./i.test(block) &&
+        /APELLIDO Y NOMBRE|[A-ZÁÉÍÓÚÑ ]+\s+\d{1,6}\s+\d{2}\/\d{2}\/\d{4}/.test(
+          block
+        )
+      ) {
+        out.push(parseBlock(block));
       }
     }
   }
 
-  // 5) Deduplicar por (cuil|legajo|fechaIngreso)
   const uniq = new Map<string, ParsedRow>();
-  for (const r of out) {
-    const key = [r.cuil ?? "", r.legajo ?? "", r.fechaIngreso ?? ""].join("|");
-    uniq.set(key, r);
+
+  for (const row of out) {
+    const key = [
+      row.cuil ?? "",
+      row.legajo ?? "",
+      row.fechaIngreso ?? "",
+    ].join("|");
+
+    uniq.set(key, row);
   }
 
   return NextResponse.json({ rows: Array.from(uniq.values()) });

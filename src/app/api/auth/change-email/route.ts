@@ -23,8 +23,15 @@ export async function POST(req: NextRequest) {
 
     await UsersRepo.updateEmail(user.id, email);
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (e?.message === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    return NextResponse.json({ error: e?.message || "Bad Request" }, { status: 400 });
+  }  catch (error: unknown) {
+    if (error instanceof Error) {      
+      if (error?.message === "UNAUTHORIZED") {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }    
   }
 }

@@ -3,14 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")  
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  directUrl    = env("DIRECT_URL")
   relationMode = "prisma"
 }
 
 model Usuario {
-  id            String         @id @default(uuid())
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId        String         @unique
   tipoDocumento TipoDocumento? @default(DNI)
   documento     String?        @unique
@@ -23,7 +23,7 @@ model Usuario {
   nombre          String?
   apellido        String?
   avatarUrl       String?
-  fechaNacimiento DateTime? @db.Date
+  fechaNacimiento DateTime?     @db.Date
   genero          Genero?
   estadoCivil     EstadoCivil?
   nacionalidad    Nacionalidad?
@@ -36,9 +36,8 @@ model Usuario {
 
   legajo Legajo?
 
-  // ✅ agregá esto
-  leaveRequests      LeaveRequest[]
-  vacationBalances   VacationBalance[]
+  leaveRequests    LeaveRequest[]
+  vacationBalances VacationBalance[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -72,9 +71,17 @@ model Legajo {
 }
 
 model Rol {
-  id       Int       @id @default(autoincrement())
-  nombre   String    @unique
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
+  descripcion String?
+
   usuarios Usuario[]
+  permisos RolPermiso[]
+
+  activo Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PasswordResetToken {
@@ -108,9 +115,9 @@ model PayrollReceipt {
 }
 
 model LeaveRequest {
-  id         String      @id @default(cuid())
-  userId     String
-  user       Usuario?    @relation(fields: [userId], references: [id])
+  id     String   @id @default(cuid())
+  userId String
+  user   Usuario? @relation(fields: [userId], references: [id])
 
   type       LeaveType
   status     LeaveStatus @default(PENDIENTE)
@@ -126,11 +133,29 @@ model LeaveRequest {
   typeCatalogId Int?
   typeCatalog   LeaveTypeCatalog? @relation(fields: [typeCatalogId], references: [id])
 
+  attachments LeaveAttachment[]
+
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([userId, startYmd])
   @@index([userId, endYmd])
   @@index([typeCatalogId])
+}
+
+model LeaveAttachment {
+  id             String       @id @default(cuid())
+  leaveRequestId String
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+
+  fileName String
+  fileUrl  String
+  filePath String
+  mimeType String
+  size     Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([leaveRequestId])
 }
 
 model LeaveTypeCatalog {
@@ -258,18 +283,50 @@ enum LeaveStatus {
 }
 
 model VacationBalance {
-  id        String   @id @default(uuid())
-  userId    String
-  user      Usuario  @relation(fields: [userId], references: [id])
+  id     String  @id @default(uuid()) @db.Uuid
+  userId String  @db.Uuid
+  user   Usuario @relation(fields: [userId], references: [id])
 
   year      Int
   totalDays Int
-  usedDays  Int      @default(0)
+  usedDays  Int @default(0)
 
   deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([userId, year])
   @@index([userId])
+}
+
+model Permiso {
+  id          Int     @id @default(autoincrement())
+  modulo      String
+  accion      String
+  nombre      String?
+  descripcion String?
+  icono       String?
+  activo      Boolean @default(true)
+
+  roles RolPermiso[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([modulo, accion])
+  @@index([modulo])
+  @@index([activo])
+}
+
+model RolPermiso {
+  rolId     Int
+  permisoId Int
+
+  rol     Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([rolId, permisoId])
+  @@index([permisoId])
 }

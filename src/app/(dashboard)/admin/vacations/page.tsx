@@ -3,8 +3,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sunrise } from "lucide-react";
 import { AdminLeavesList } from "@/features/leaves/ui/AdminLeavesList";
+import { useCan } from "@/hooks/useCan";
+import AccessDenied403Page from "../../403/page";
 
 export default function AdminVacationsPage() {
+  const canAccess = useCan("vacaciones", "ver");
+
+  if (!canAccess) {
+    return <AccessDenied403Page/>;
+  }
+
   return (
     <Card>
       <CardHeader>

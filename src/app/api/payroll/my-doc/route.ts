@@ -1,22 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { prisma } from "@/lib/db";
 import { getServerMe } from "@/lib/server-auth";
 import { cuilDashed, cuilDigits } from "@/lib/cuil";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type ServerMeUser = {
+  id?: string | null;
+  cuil?: string | null;
+  cuilNumero?: string | null;
+};
+
+function getSafeUser(value: unknown): ServerMeUser | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (!("user" in value)) {
+    return null;
+  }
+
+  const user = (value as { user?: unknown }).user;
+
+  if (!user || typeof user !== "object") {
+    return null;
+  }
+
+  const candidate = user as Record<string, unknown>;
+
+  return {
+    id: typeof candidate.id === "string" ? candidate.id : null,
+    cuil: typeof candidate.cuil === "string" ? candidate.cuil : null,
+    cuilNumero:
+      typeof candidate.cuilNumero === "string"
+        ? candidate.cuilNumero
+        : null,
+  };
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const period = searchParams.get("period") || new Date().toISOString().slice(0, 7);
 
   const me = await getServerMe(req);
+  const user = getSafeUser(me);
+  
   const userId = me?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const rawCuil = (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
+   const rawCuil = user?.cuil || user?.cuilNumero;
   if (!rawCuil) {
     return NextResponse.json({ error: "CUIL no configurado en tu perfil." }, { status: 400 });
   }

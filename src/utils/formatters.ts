@@ -33,10 +33,7 @@ export function formatMessage(message: string): string {
     .split(".")
     .map((s) => s.trim())
     .filter(Boolean)
-    .map(
-      (s) =>
-        s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
-    );
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase());
 
   let result = sentences.join(". ");
   if (!result.endsWith(".")) {
@@ -58,18 +55,22 @@ export function formatDate(date: Date | string): string {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export function formatApiMessage(path: string): string {
   const parts = path.split(".");
-  let current: any = messages;
+  let current: unknown = messages;
 
   for (const part of parts) {
-    if (current[part] === undefined) {
+    if (!isRecord(current) || !(part in current)) {
       console.warn(`[formatMessage] Mensaje no encontrado para la ruta: ${path}`);
       return path;
     }
+
     current = current[part];
   }
 
-  return current;
+  return typeof current === "string" ? current : path;
 }

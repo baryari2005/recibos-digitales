@@ -3,6 +3,14 @@
 import useSWR from "swr";
 import { axiosInstance } from "@/lib/axios";
 
+export type LeaveAttachment = {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType?: string | null;
+  size?: number | null;
+};
+
 export type LeaveItem = {
   id: string;
   type: string;
@@ -12,8 +20,8 @@ export type LeaveItem = {
   endYmd: string;
   daysCount: number;
   createdAt: string;
+  attachments?: LeaveAttachment[];
 };
-
 const fetcher = (url: string) =>
   axiosInstance.get(url).then(res => res.data);
 

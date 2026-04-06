@@ -1,35 +1,47 @@
-// src/lib/api/account.ts
 import { axiosInstance } from "@/lib/axios";
+import type { AxiosRequestConfig } from "axios";
 
-export async function changePassword(payload: { currentPassword: string; newPassword: string }) {
-  const { data } = await axiosInstance.post("/auth/change-password", payload, {
-    withCredentials: true,
-    skipAuthRedirect: true as any, // 👈 evita que el interceptor te mande a /login en 401
-  });
+type RequestConfigWithSkipAuthRedirect = AxiosRequestConfig & {
+  skipAuthRedirect?: boolean;
+};
+
+const authSafeConfig: RequestConfigWithSkipAuthRedirect = {
+  withCredentials: true,
+  skipAuthRedirect: true,
+};
+
+export async function changePassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const { data } = await axiosInstance.post(
+    "/auth/change-password",
+    payload,
+    authSafeConfig
+  );
+
   return data;
 }
 
-export async function changeEmail(payload: { email: string; password: string }) {
-  const { data } = await axiosInstance.post("/auth/change-email", payload, {
-    withCredentials: true,
-    skipAuthRedirect: true as any, // idem
-  });
+export async function changeEmail(payload: {
+  email: string;
+  password: string;
+}) {
+  const { data } = await axiosInstance.post(
+    "/auth/change-email",
+    payload,
+    authSafeConfig
+  );
+
   return data;
 }
 
 export async function changeMyAvatar(payload: { avatarUrl: string }) {
   const { data } = await axiosInstance.post(
     "/auth/change-avatar",
-    payload,                    // 👈 directo, no { payload }
-    { withCredentials: true, skipAuthRedirect: true as any }
+    payload,
+    authSafeConfig
   );
+
   return data;
 }
-
-// export async function changeMyAvatarFromTmp(tmpPath: string) {
-//   const { data } = await axiosInstance.post("/auth/change-avatar-from-tmp", { tmpPath }, {
-//     withCredentials: true,
-//     skipAuthRedirect: true as any, // opcional pero recomendado
-//   });
-//   return data;
-// }

@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
     await sendPasswordReset(user.email, resetLink, user.nombre ?? undefined);
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } 
+  catch {
     // Devolvemos ok igual para no filtrar existencia de email/userId
     return NextResponse.json({ ok: true });
   }

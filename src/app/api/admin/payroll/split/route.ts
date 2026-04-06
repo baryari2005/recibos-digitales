@@ -8,6 +8,26 @@ import { prisma } from "@/lib/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type PdfTextItem = {
+  str: string;
+};
+
+type PdfTextMarkedContent = {
+  type: string;
+  id?: string;
+};
+
+type PdfTextContent = {
+  items: Array<PdfTextItem | PdfTextMarkedContent>;
+};
+
+type PdfPageData = {
+  getTextContent: (options: {
+    normalizeWhitespace: boolean;
+    disableCombineTextItems: boolean;
+  }) => Promise<PdfTextContent>;
+};
+
 // Helpers
 function sanitize(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -93,14 +113,21 @@ export async function POST(req: NextRequest) {
   const { default: pdfParse } = await import("pdf-parse/lib/pdf-parse.js");
   const pages: string[] = [];
 
-  const render_page = (pageData: any) =>
-    pageData
-      .getTextContent({ normalizeWhitespace: true, disableCombineTextItems: false })
-      .then((tc: any) => {
-        const text = (tc.items as any[]).map((it) => it.str).join(" ");
-        pages.push(text);
-        return text;
-      });
+const render_page = (pageData: PdfPageData) =>
+  pageData
+    .getTextContent({
+      normalizeWhitespace: true,
+      disableCombineTextItems: false,
+    })
+    .then((tc: PdfTextContent) => {
+      const text = tc.items
+        .filter((item): item is PdfTextItem => "str" in item)
+        .map((item) => item.str)
+        .join(" ");
+
+      pages.push(text);
+      return text;
+    });
 
   await pdfParse(nodeBuffer, { pagerender: render_page, max: 0 });
 
@@ -193,9 +220,12 @@ export async function POST(req: NextRequest) {
         },
       });
       createdOrUpdatedIds.push(rec.id);
-    } catch (e: any) {
-      // No frenamos todo el proceso por un error de DB.
-      console.error("[split] DB upsert error:", cuilForDb, periodDisplay, e?.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {  
+        {
+          console.error("[split] DB upsert error:", cuilForDb, periodDisplay, error?.message);
+        }
+      }
     }
   }
 

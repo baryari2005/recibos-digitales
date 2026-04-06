@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, Check, Loader2 } from "lucide-react";
-import type { Receipt } from "../../receipts/types";
+import type { Receipt } from "../types/types";
 
 function getReceiptLabel(period: string) {
   const p = (period || "").toUpperCase();

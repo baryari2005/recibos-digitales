@@ -1,51 +1,85 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/server-auth";
-import { LeaveStatus, LeaveType } from "@prisma/client";
-
+import { requireAuth, requirePermission } from "@/lib/server-auth";
+import { LeaveStatus, LeaveType, Prisma } from "@prisma/client";
 
 const norm = (v?: string | null) => (v ?? "").trim().toUpperCase();
 
-// ids según tu tabla
 const ADMIN_ROLE_IDS = new Set<number>([2, 4]);
 const ADMIN_ROLE_NAMES = new Set<string>(["ADMIN", "RRHH", "ADMINISTRADOR"]);
 
+function getViewPermissionByType(typeParam: string | null, isAdmin: boolean) {
+  if (typeParam === "VACACIONES") {
+    return isAdmin
+      ? ({ modulo: "vacaciones", accion: "ver" } as const)
+      : ({ modulo: "vacaciones", accion: "cargar" } as const);
+  }
+
+  if (typeParam === "OTHER") {
+    return isAdmin
+      ? ({ modulo: "licencias", accion: "ver" } as const)
+      : ({ modulo: "licencias", accion: "cargar" } as const);
+  }
+
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireAuth(req);
+    const loggedInUser = await requireAuth(req);
 
     const { searchParams } = new URL(req.url);
     const typeParam = searchParams.get("type");
 
-    const roleId = Number(user?.rol?.id ?? 0);
-    const roleName = norm(user?.rol?.nombre);
+    const roleId = Number(loggedInUser?.rol?.id ?? 0);
+    const roleName = norm(loggedInUser?.rol?.nombre);
 
-    const isAdmin = ADMIN_ROLE_IDS.has(roleId) || ADMIN_ROLE_NAMES.has(roleName);
+    const isAdmin =
+      ADMIN_ROLE_IDS.has(roleId) || ADMIN_ROLE_NAMES.has(roleName);
 
-    const where: any = {
+    const permission = getViewPermissionByType(typeParam, isAdmin);
+
+    if (!permission) {
+      return NextResponse.json(
+        { error: "Missing or invalid type parameter" },
+        { status: 400 }
+      );
+    }
+
+    await requirePermission(
+      loggedInUser,
+      permission.modulo,
+      permission.accion
+    );
+
+    const where: Prisma.LeaveRequestWhereInput = {
       status: LeaveStatus.PENDIENTE,
     };
 
-    // 🔐 Si NO es admin → solo sus propias solicitudes
     if (!isAdmin) {
-      where.userId = user.id;
+      where.userId = loggedInUser.id;
     }
 
-    // 🔎 Filtro por tipo
     if (typeParam === "VACACIONES") {
       where.type = LeaveType.VACACIONES;
-    }
-
-    if (typeParam === "OTHER") {
+    } else if (typeParam === "OTHER") {
       where.type = { not: LeaveType.VACACIONES };
     }
 
     const count = await prisma.leaveRequest.count({ where });
 
     return NextResponse.json({ count });
-  } catch (e: any) {
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    console.error("GET /api/leaves/pending-count error:", error);
+
+    if (error instanceof Error) {
+      if (error.message === "UNAUTHORIZED") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      if (error.message === "FORBIDDEN") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     return NextResponse.json({ error: "Server error" }, { status: 500 });

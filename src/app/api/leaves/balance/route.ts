@@ -31,7 +31,12 @@ export async function GET(req: NextRequest) {
       used,
       available: Math.max(total - used, 0),
     });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    console.error("ERROR /api/leaves/balance:", error);
+
+    return NextResponse.json(
+      { error: "Error en balance" },
+      { status: 500 }
+    );
   }
 }

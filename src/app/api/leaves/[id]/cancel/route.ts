@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/server-auth";
+import { requireAuth, requirePermission } from "@/lib/server-auth";
 import { prisma } from "@/lib/db";
 import { LeaveRepository } from "@/features/leaves/infrastructure/leave.prisma-repository";
 
@@ -8,14 +8,17 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth(req);
+    const loggedInUser = await requireAuth(req);
+    requirePermission(loggedInUser, "vacaciones", "cancelar");
+
+    const userId = loggedInUser.id;
 
     const { id: leaveId } = await context.params;
 
     const repo = new LeaveRepository(prisma);
     const leave = await repo.findById(leaveId);
 
-    if (!leave || leave.userId !== user.id) {
+    if (!leave || leave.userId !== userId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -29,14 +32,17 @@ export async function POST(
     await repo.cancel(leaveId);
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  }
+  catch (error: unknown) {
+    if (error instanceof Error) {
+      if (error?.message === "UNAUTHORIZED") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
-    return NextResponse.json(
-      { error: e?.message || "Error" },
-      { status: 400 }
-    );
+      return NextResponse.json(
+        { error: error?.message || "Error" },
+        { status: 400 }
+      );
+    }
   }
 }

@@ -1,6 +1,16 @@
 import useSWR from "swr";
 import { axiosInstance } from "@/lib/axios";
 
+export type PendingLeaveAttachment = {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  filePath: string;
+  mimeType: string;
+  size?: number | null;
+  createdAt: string;
+};
+
 export type PendingLeave = {
   id: string;
   type: string;
@@ -8,14 +18,15 @@ export type PendingLeave = {
   startYmd: string;
   endYmd: string;
   daysCount: number;
-  note?: string;
+  note?: string | null;
+  attachments?: PendingLeaveAttachment[];
   user: {
     id: string;
     nombre: string;
     apellido: string;
     legajo?: {
       numeroLegajo?: string;
-    };
+    } | null;
   };
 };
 
@@ -27,7 +38,7 @@ export function usePendingApprovals() {
     "/admin/leaves/pending",
     fetcher,
     {
-      refreshInterval: 8000,      // 🔥 polling
+      refreshInterval: 8000,
       revalidateOnFocus: false,
       revalidateOnMount: true,
     }

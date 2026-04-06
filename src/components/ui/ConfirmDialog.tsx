@@ -41,7 +41,7 @@ export function ConfirmDialog({
             <DialogContent>
                 {/* HEADER */}
                 <DialogHeader className="px-5 pt-4 ">
-                    <DialogTitle className="text-sm-plus font-semibold flex">                        
+                    <DialogTitle className="text-sm-plus font-semibold flex">
                         {title}
                     </DialogTitle>
                     <Separator className="mt-4 mb-4" />
@@ -74,7 +74,10 @@ export function ConfirmDialog({
                                 Procesando...
                             </span>
                         ) : (
-                            icon && <span className="inline-flex items-center gap-2">{icon} {confirmLabel}</span>
+                            <span className="inline-flex items-center gap-2">
+                                {icon}
+                                <span>{confirmLabel}</span>
+                            </span>
                         )}
                     </Button>
                 </DialogFooter>

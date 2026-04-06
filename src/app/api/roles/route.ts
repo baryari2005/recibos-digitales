@@ -1,18 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/authz";
+import { requireAuth, requirePermission } from "@/lib/server-auth";
+import { createRole } from "@/lib/services/role.service";
+import { createRoleSchema } from "@/features/roles/schemas/role.schema";
+import { mapRoleRouteError } from "@/features/roles/lib/role.errors";
+import { parseRoleListParams } from "@/features/roles/lib/role.filters";
+import { listRoles } from "@/features/roles/services/role.service";
+import { toRoleListItem } from "@/features/roles/lib/role.mapper";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.res;
+  const loggedInUser = await requireAuth(req);
+  requirePermission(loggedInUser, "roles", "ver");
 
-  const roles = await prisma.rol.findMany({
-    orderBy: { id: "asc" },
-    select: { id: true, nombre: true },
+  const params = parseRoleListParams(req.url);
+  const { items, meta } = await listRoles(params);
+
+  return NextResponse.json({
+    data: items.map(toRoleListItem),
+    meta,
   });
+}
 
-  return NextResponse.json(roles);
+export async function POST(req: NextRequest) {
+  try {
+    const user = await requireAuth(req);
+    requirePermission(user, "roles", "crear");
+
+    const body = await req.json();
+    const parsed = createRoleSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid payload", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const role = await createRole(parsed.data);
+
+    return NextResponse.json({ data: role }, { status: 201 });
+  } catch (error) {
+    return mapRoleRouteError(error);
+  }
 }

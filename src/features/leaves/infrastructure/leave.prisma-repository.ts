@@ -1,25 +1,57 @@
-import { PrismaClient, LeaveStatus, LeaveType } from "@prisma/client";
+import {
+  Prisma,
+  PrismaClient,
+  LeaveStatus,
+  LeaveType,
+} from "@prisma/client";
 
-function enumMatches<T extends Record<string, string>>(enm: T, q: string) {
+function enumMatches<T extends Record<string, string>>(
+  enm: T,
+  q: string
+): Array<T[keyof T]> {
   const upper = q.toUpperCase();
 
-  return Object.values(enm).filter((v) =>
-    v.includes(upper)
+  return Object.values(enm).filter(
+    (v): v is T[keyof T] => v.includes(upper)
   );
 }
 
 export class LeaveRepository {
-  constructor(private readonly prisma: PrismaClient) { }
+  constructor(private readonly prisma: PrismaClient) {}
 
   create(data: {
     userId: string;
-    type: any;
+    type: LeaveType;
     startYmd: string;
     endYmd: string;
     daysCount: number;
-    note?: string;
+    note?: string | null;
+    attachments?: {
+      fileName: string;
+      fileUrl: string;
+      filePath: string;
+      mimeType: string;
+      size?: number;
+    }[];
   }) {
-    return this.prisma.leaveRequest.create({ data });
+    return this.prisma.leaveRequest.create({
+      data: {
+        userId: data.userId,
+        type: data.type,
+        startYmd: data.startYmd,
+        endYmd: data.endYmd,
+        daysCount: data.daysCount,
+        note: data.note?.trim() || null,
+        attachments: data.attachments?.length
+          ? {
+              create: data.attachments,
+            }
+          : undefined,
+      },
+      include: {
+        attachments: true,
+      },
+    });
   }
 
   findPendingVacationByUser(userId: string) {
@@ -40,13 +72,13 @@ export class LeaveRepository {
   }) {
     const { userId, startYmd, endYmd } = params;
 
-    // Importante: como tu endYmd es "Regreso", tratamos rango como [start, end)
-    // Overlap si existing.start < new.end AND existing.end > new.start
     return this.prisma.leaveRequest.findFirst({
       where: {
         userId,
         type: LeaveType.VACACIONES,
-        status: { in: [LeaveStatus.PENDIENTE, LeaveStatus.APROBADO] }, // si tu enum difiere, ajustalo
+        status: {
+          in: [LeaveStatus.PENDIENTE, LeaveStatus.APROBADO],
+        },
         startYmd: { lt: endYmd },
         endYmd: { gt: startYmd },
       },
@@ -54,7 +86,7 @@ export class LeaveRepository {
     });
   }
 
-  findPendingForApproval(params: {
+  async findPendingForApproval(params: {
     q?: string;
     page: number;
     pageSize: number;
@@ -62,7 +94,7 @@ export class LeaveRepository {
   }) {
     const { q, page, pageSize, type } = params;
 
-    const where: any = {
+    const where: Prisma.LeaveRequestWhereInput = {
       status: LeaveStatus.PENDIENTE,
     };
 
@@ -78,8 +110,7 @@ export class LeaveRepository {
       const typeMatches = enumMatches(LeaveType, q);
       const statusMatches = enumMatches(LeaveStatus, q);
 
-      // 🔹 1. Buscar usuarios que matchean
-      const usersPromise = this.prisma.usuario.findMany({
+      const users = await this.prisma.usuario.findMany({
         where: {
           OR: [
             { nombre: { contains: q, mode: "insensitive" } },
@@ -89,55 +120,19 @@ export class LeaveRepository {
         select: { id: true },
       });
 
-      return usersPromise.then(async (users) => {
-        const userIds = users.map(u => u.id);
+      const userIds = users.map((u) => u.id);
 
-        where.OR = [
-          ...(userIds.length
-            ? [{ userId: { in: userIds } }]
-            : []),
-
-          {
-            note: { contains: q, mode: "insensitive" },
-          },
-
-          ...(typeMatches.length
-            ? [{ type: { in: typeMatches } }]
-            : []),
-
-          ...(statusMatches.length
-            ? [{ status: { in: statusMatches } }]
-            : []),
-        ];
-
-        const [items, total] = await Promise.all([
-          this.prisma.leaveRequest.findMany({
-            where,
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  nombre: true,
-                  apellido: true,
-                  legajo: {
-                    select: { numeroLegajo: true },
-                  },
-                },
-              },
-            },
-            orderBy: { createdAt: "asc" },
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-          }),
-          this.prisma.leaveRequest.count({ where }),
-        ]);
-
-        return { items, total };
-      });
+      where.OR = [
+        ...(userIds.length > 0 ? [{ userId: { in: userIds } }] : []),
+        { note: { contains: q, mode: "insensitive" } },
+        ...(typeMatches.length > 0 ? [{ type: { in: typeMatches } }] : []),
+        ...(statusMatches.length > 0
+          ? [{ status: { in: statusMatches } }]
+          : []),
+      ];
     }
 
-    // 🔹 sin búsqueda
-    return Promise.all([
+    const [items, total] = await Promise.all([
       this.prisma.leaveRequest.findMany({
         where,
         include: {
@@ -151,24 +146,45 @@ export class LeaveRepository {
               },
             },
           },
+          attachments: {
+            select: {
+              id: true,
+              fileName: true,
+              fileUrl: true,
+              filePath: true,
+              mimeType: true,
+              size: true,
+              createdAt: true,
+            },
+          },
         },
         orderBy: { createdAt: "asc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       this.prisma.leaveRequest.count({ where }),
-    ]).then(([items, total]) => ({ items, total }));
+    ]);
+
+    return { items, total };
   }
 
   findByUser(userId: string) {
     return this.prisma.leaveRequest.findMany({
       where: { userId },
+      include: {
+        attachments: true,
+      },
       orderBy: { createdAt: "desc" },
     });
   }
 
   findById(id: string) {
-    return this.prisma.leaveRequest.findUnique({ where: { id } });
+    return this.prisma.leaveRequest.findUnique({
+      where: { id },
+      include: {
+        attachments: true,
+      },
+    });
   }
 
   cancel(id: string) {

@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { FileSignature } from "lucide-react";
 
-import { useReceipts } from "@/features/receipts/hooks/useReceipts";
 import { ReceiptsTabs } from "@/features/receipts/components/ReceiptsTabs";
 import { ReceiptsList } from "@/features/receipts/components/ReceiptsList";
 import { ReceiptViewer } from "@/features/receipts/components/ReceiptViewer";
+import { useReceipts } from "../../../features/receipts/hooks/useReceipts";
+import { useCan } from "@/hooks/useCan";
+import AccessDenied403Page from "../403/page";
 
 export default function MisDocumentosPage() {
   const searchParams = useSearchParams();
@@ -21,6 +23,13 @@ export default function MisDocumentosPage() {
     handleSign,
   } = useReceipts(refreshQP);
 
+  const canAccess = useCan("recibos", "ver");
+
+  if (!canAccess)
+  {
+    return <AccessDenied403Page/>
+  }
+
   return (
     <div className="grid gap-6">
       <Card>
@@ -32,7 +41,6 @@ export default function MisDocumentosPage() {
 
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
-            {/* Columna izquierda */}
             <Card className="h-[calc(100vh-230px)] overflow-hidden">
               <CardContent className="p-0 h-full flex flex-col">
                 <div className="-mx-0 px-3 mb-2 h-11">
@@ -53,7 +61,6 @@ export default function MisDocumentosPage() {
               </CardContent>
             </Card>
 
-            {/* Columna derecha */}
             <Card className="h-[calc(100vh-230px)] overflow-hidden">
               <CardContent className="p-0 h-full flex flex-col">
                 <ReceiptViewer

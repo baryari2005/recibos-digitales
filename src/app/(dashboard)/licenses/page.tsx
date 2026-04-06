@@ -4,27 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList } from "lucide-react";
 import { VacationRequestPanel } from "@/features/leaves/ui/VacationRequestPanel";
 import { VacationHistoryPanel } from "@/features/leaves/ui/VacationHistoryPanel";
-import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import { useState } from "react";
-import { redirect } from "next/navigation";
-
-
-const norm = (v?: string | null) => (v ?? "").trim().toUpperCase();
-
-const ADMIN_ROLE_IDS = new Set<number>([2, 4]);
-const ADMIN_ROLE_NAMES = new Set<string>(["ADMIN", "RRHH", "ADMINISTRADOR"]);
+import { useCan } from "@/hooks/useCan";
+import AccessDenied403Page from "../403/page";
 
 export default function LicensesPage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const { user } = useCurrentUser();
 
-  const roleId = Number(user?.rol?.id ?? 0);
-  const roleName = norm(user?.rol?.nombre);
+  const canAccess = useCan("licencias", "cargar");
+  if (!canAccess)
+    return <AccessDenied403Page />
 
-  const isApprover = ADMIN_ROLE_IDS.has(roleId) || ADMIN_ROLE_NAMES.has(roleName);
-
-  // Sacar cuando le demos la solucion
-  redirect("/coming-soon");
   return (
     <div className="grid gap-6">
       <Card>
@@ -36,30 +26,29 @@ export default function LicensesPage() {
         </CardHeader>
 
         <CardContent>
-          {/* {isApprover ? (
-            <AdminPendingLeavesPanel type="OTHER" />
-          ) : ( */}
-          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
-            <Card className="h-[calc(100vh-230px)] overflow-hidden">
-              <CardContent className="h-full p-3">
+          <div className="grid grid-cols-1 gap-4 items-stretch lg:grid-cols-[360px_1fr]">
+            {/* Columna izquierda */}
+            <Card className="h-full">
+              <CardContent className="flex h-full flex-col p-3">
                 <VacationRequestPanel
                   excludeTypes={["VACACIONES"]}
-                  onCreated={() => setRefreshVersion(v => v + 1)}
+                  onCreated={() => setRefreshVersion((v) => v + 1)}
                 />
               </CardContent>
             </Card>
 
+            {/* Columna derecha */}
             <Card className="h-full">
               <CardContent className="h-full p-3">
                 <VacationHistoryPanel
                   type="OTHER"
-                  refreshToken={refreshVersion} />
+                  refreshToken={refreshVersion}
+                />
               </CardContent>
             </Card>
           </div>
-
         </CardContent>
       </Card>
     </div>
   );
-}
+};

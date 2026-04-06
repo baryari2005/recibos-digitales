@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ChangePasswordClient from "./ChangePasswordClient";
+import ChangePasswordClient from "../../features/change-password/components/ChangePasswordClient";
 
 export const metadata: Metadata = { title: "Cambiar contraseña" };
 

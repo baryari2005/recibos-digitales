@@ -1,41 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { axiosInstance } from "@/lib/axios";
-
-type MeResponse = {
-  user: {
-    id: string;
-    userId: string | null;
-    email: string;
-    nombre: string | null;
-    apellido: string | null;
-    avatarUrl: string | null;
-    mustChangePassword: boolean;
-    rol?: { id: number; nombre: string } | null;
-  } | null;
-};
+import { useAuth } from "@/stores/auth";
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<MeResponse["user"]>(null);
-  const [loading, setLoading] = useState(true);
+  const user = useAuth((state) => state.user);
+  const loading = useAuth((state) => state.loading);
+  const hasHydrated = useAuth((state) => state.hasHydrated);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await axiosInstance.get<MeResponse>("/auth/me");
-        if (!alive) return;
-        setUser(res.data.user ?? null);
-      } catch {
-        if (!alive) return;
-        setUser(null);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
-
-  return { user, loading };
+  return { user, loading, hasHydrated };
 }

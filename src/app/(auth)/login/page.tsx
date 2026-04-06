@@ -1,7 +1,14 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-import LoginForm from "@/components/auth/LoginForm/index";
+import LoginForm from "@/features/auth/components/login-form/LoginForm";
 
-export default function Page() {
-  return <LoginForm  />;
+type LoginPageProps = {
+  searchParams?: Promise<{
+    next?: string;
+  }>;
+};
+
+export default async function Page({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const nextParam = resolvedSearchParams?.next;
+
+  return <LoginForm nextParam={nextParam} />;
 }

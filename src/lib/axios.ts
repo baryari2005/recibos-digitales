@@ -1,12 +1,19 @@
-import axios, { AxiosRequestConfig } from "axios";
+import axios, {
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from "axios";
 
-type AxiosRequestConfigExt = AxiosRequestConfig & { skipAuthRedirect?: boolean };
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
 
-const baseURL = "/api"; // 👈 usar Next API Routes
+const baseURL = "/api";
 
 export const axiosInstance = axios.create({
   baseURL,
-  withCredentials: true,
 });
 
 let inMemoryToken: string | null = null;
@@ -15,8 +22,11 @@ export function setAuthToken(token: string | null) {
   inMemoryToken = token;
 
   if (typeof window !== "undefined") {
-    if (token) localStorage.setItem("token", token);
-    else localStorage.removeItem("token");
+    if (token) {
+      localStorage.setItem("token", token);
+    } else {
+      localStorage.removeItem("token");
+    }
   }
 
   if (token) {
@@ -27,114 +37,68 @@ export function setAuthToken(token: string | null) {
 }
 
 if (typeof window !== "undefined") {
-  const t = localStorage.getItem("token");
-  if (t) setAuthToken(t);
+  const token = localStorage.getItem("token");
+  if (token) {
+    setAuthToken(token);
+  }
 }
 
-function maskAuthHeader(headers: any) {
-  if (!headers) return headers;
-  const clone = { ...headers };
-  const authKey = Object.keys(clone).find((k) => k.toLowerCase() === "authorization");
-  if (authKey && typeof clone[authKey] === "string") clone[authKey] = "Bearer ***";
-  return clone;
-}
-function buildFullUrl(config: AxiosRequestConfig) {
-  const url = config.url ?? "";
-  if (/^https?:\/\//i.test(url)) return url;
-  const base = (config.baseURL ?? "").replace(/\/$/, "");
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return `${base}${path}`;
-}
+type AxiosRequestConfigExt = AxiosRequestConfig & {
+  skipAuthRedirect?: boolean;
+};
+
 function isLoginCall(url = "") {
   try {
-    const u = url.startsWith("http") ? new URL(url) : new URL(url, "http://x");
-    return u.pathname.endsWith("/auth/login");
+    const parsedUrl = url.startsWith("http")
+      ? new URL(url)
+      : new URL(url, "http://x");
+
+    return parsedUrl.pathname.endsWith("/auth/login");
   } catch {
     return url.endsWith("/auth/login");
   }
 }
 
-axiosInstance.interceptors.request.use((config) => {
-  const token = inMemoryToken ?? (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token =
+    inMemoryToken ??
+    (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+
   if (token) {
     config.headers = config.headers ?? {};
-    (config.headers as any).Authorization = `Bearer ${token}`;
+    (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
   }
-
-  const full = buildFullUrl(config);
-  let qs = "";
-  if (config.params && typeof config.params === "object") {
-    try { qs = `?${new URLSearchParams(config.params as any).toString()}`; } catch {}
-  }
-  console.log("[AXIOS][REQUEST]", full + qs, {
-    method: config.method,
-    headers: maskAuthHeader(config.headers),
-  });
 
   return config;
 });
 
-// axiosInstance.interceptors.response.use(
-//   (res) => res,
-//   (err) => {
-//     const status = err?.response?.status;
-//     const cfg = (err?.config ?? {}) as AxiosRequestConfigExt;
-//     const reqUrl: string = cfg?.url || "";
-
-//     if (cfg?.skipAuthRedirect) {
-//       return Promise.reject(err);
-//     }
-
-//     if (typeof window !== "undefined") {
-//       const isOnLogin = window.location.pathname === "/login";
-//       const loginCall = isLoginCall(reqUrl);
-//       if (status === 401 && !isOnLogin && !loginCall) {
-//         const here = window.location.pathname + window.location.search;
-//         const next = encodeURIComponent(here);
-//         const dest = `/login?next=${next}`;
-//         if (window.location.href !== dest) window.location.replace(dest);
-//         return new Promise(() => {}); // corta cadenas
-//       }
-//     }
-
-//     return Promise.reject(err);
-//   }
-// );
-
 axiosInstance.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const status = err?.response?.status;
-    const cfg = (err?.config ?? {}) as AxiosRequestConfigExt;
-    const reqUrl: string = cfg?.url || "";
+  (response) => response,
+  (error: AxiosError) => {
+    const status = error.response?.status;
+    const config = (error.config ?? {}) as AxiosRequestConfigExt;
+    const requestUrl = config.url ?? "";
 
-    if (cfg?.skipAuthRedirect) {
-      return Promise.reject(err);
+    if (config.skipAuthRedirect) {
+      return Promise.reject(error);
     }
 
     if (typeof window !== "undefined") {
       const isOnLogin = window.location.pathname === "/login";
-      const loginCall = isLoginCall(reqUrl);
+      const loginCall = isLoginCall(requestUrl);
 
       if (status === 401 && !isOnLogin && !loginCall) {
-        console.warn("[AUTH] 401 detectado → logout");
-
-        // 🔥 1. limpiar token
         setAuthToken(null);
 
-        // 🔔 2. avisar a toda la app
-        window.dispatchEvent(new Event("auth:logout"));
+        const currentPath = window.location.pathname + window.location.search;
+        const next = encodeURIComponent(currentPath);
 
-        // 🔀 3. redirigir
-        const here = window.location.pathname + window.location.search;
-        const next = encodeURIComponent(here);
         window.location.replace(`/login?next=${next}`);
 
-        // ⛔ cortar promesas
-        return new Promise(() => {});
+        return new Promise<never>(() => {});
       }
     }
 
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );

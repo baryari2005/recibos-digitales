@@ -7,7 +7,7 @@ type Props = {
   onViewRequests: () => void;
 };
 
-export function PendingVacationBlock({ pendingLabel, onViewRequests }: Props) {
+export function PendingVacationBlock({ pendingLabel }: Props) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center text-center px-4">

@@ -1,14 +1,12 @@
-// src/app/api/admin/leaves/pending/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { LeaveRepository } from "@/features/leaves/infrastructure/leave.prisma-repository";
 import { ListPendingLeavesUseCase } from "@/features/leaves/application/list-pending-leaves.usecase";
-import { requireAdmin } from "@/lib/authz";
+import { requireAuth, requirePermission } from "@/lib/server-auth";
 
 export async function GET(req: NextRequest) {
-  try {    
-    const auth = await requireAdmin(req);
-    if (!auth.ok) return auth.res;
+  try {
+    const loggedInUser = await requireAuth(req);
 
     const { searchParams } = new URL(req.url);
 
@@ -22,6 +20,24 @@ export async function GET(req: NextRequest) {
         ? typeParam
         : undefined;
 
+    if (type === "VACACIONES") {
+      requirePermission(loggedInUser, "vacaciones", "aprobar");
+    } else if (type === "OTHER") {
+      requirePermission(loggedInUser, "licencias", "aprobar");
+    } else {
+      const canApproveVacations = loggedInUser.permisos?.some(
+        (p) => p.modulo === "vacaciones" && p.accion === "aprobar"
+      );
+
+      const canApproveLicenses = loggedInUser.permisos?.some(
+        (p) => p.modulo === "licencias" && p.accion === "aprobar"
+      );
+
+      if (!canApproveVacations && !canApproveLicenses) {
+        return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+      }
+    }
+
     const repo = new LeaveRepository(prisma);
     const uc = new ListPendingLeavesUseCase(repo);
 
@@ -29,7 +45,7 @@ export async function GET(req: NextRequest) {
       q,
       page,
       pageSize,
-      type
+      type,
     });
 
     return NextResponse.json({
@@ -41,11 +57,26 @@ export async function GET(req: NextRequest) {
         pageCount: Math.ceil(total / pageSize),
       },
     });
-  } catch (e: any) {
-    console.error("[admin/leaves/pending] ERROR:", e);
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      if (error.message === "UNAUTHORIZED") {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 401 }
+        );
+      }
+
+      if (error.message === "FORBIDDEN") {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 403 }
+        );
+      }
+
+      console.error("GET /pending error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+
+    return NextResponse.json({ error: "Unknown server error" }, { status: 500 });
   }
 }

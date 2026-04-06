@@ -45,6 +45,7 @@ async function main() {
 
    await seedLeaveTypes(prisma);
    
+
   console.log("✅ Seed OK");
   console.log("Rol admin:", adminRol);
   console.log("Usuario admin:", {

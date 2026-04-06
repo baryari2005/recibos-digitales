@@ -3,11 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardCheck } from "lucide-react";
 import { usePendingApprovals } from "@/features/leaves/hooks/usePendingApprovals";
-import { CenteredSpinner } from "@/components/CenteredSpinner";
+import { CenteredSpinner } from "@/components/feedback/CenteredSpinner";
 import { AdminLeavesList } from "@/features/leaves/ui/AdminLeavesList";
 
 export default function AdminLeavesPage() {
-  const { items, isLoading } = usePendingApprovals();
+  const { isLoading } = usePendingApprovals();
 
   return (
     <Card>
@@ -20,7 +20,7 @@ export default function AdminLeavesPage() {
 
       <CardContent>
         {isLoading ? (
-          <CenteredSpinner label="Cargando..." />
+          <CenteredSpinner label="Cargando1..." />
         ) : (
           <AdminLeavesList />
         )}

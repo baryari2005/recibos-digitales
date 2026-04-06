@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { TabKey } from "../../receipts/types";
+import type { TabKey } from "../types/types";
 
 export function ReceiptsTabs({
   tab,

@@ -1,44 +1,94 @@
-// src/app/(dashboard)/users/[id]/legajo/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LegajoForm } from "@/components/users/LegajoForm";
-import { getUser, getUserPersonnelFile, upsertUserPersonnelFile } from "@/lib/api/users";
-import { toast } from "sonner";
-import { RoleGate } from "@/components/auth/RoleGate";
-import { CenteredSpinner } from "@/components/CenteredSpinner";
 import { Asterisk, FileUser } from "lucide-react";
+import { toast } from "sonner";
 
-// 👇 importamos tipos y unions “oficiales” del schema del form
-import type { LegajoValues } from "@/features/users/legajo.schema";
-import { EMPLOYMENT_STATUS, CONTRACT_TYPES } from "@/features/users/legajo.schema";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CenteredSpinner } from "@/components/feedback/CenteredSpinner";
+import AccessDenied403Page from "@/app/(dashboard)/403/page";
+
+import {
+  getUser,
+  getUserPersonnelFile,
+  upsertUserPersonnelFile,
+} from "@/lib/api/users";
+
+import { useCan } from "@/hooks/useCan";
+import { LegajoForm } from "@/features/users/components/LegajoForm";
+
+import type { LegajoValues } from "@/features/users/schemas/legajo.schema";
+import {
+  EMPLOYMENT_STATUS,
+  CONTRACT_TYPES,
+} from "@/features/users/schemas/legajo.schema";
+
+type PersonnelFileDTO = {
+  employeeNumber?: string | null;
+  admissionDate?: string | null;
+  terminationDate?: string | null;
+  employmentStatus?: string | null;
+  contractType?: string | null;
+  position?: string | null;
+  area?: string | null;
+  department?: string | null;
+  category?: string | null;
+  matriculaProvincial?: string | null;
+  matriculaNacional?: string | null;
+  notes?: string | null;
+};
+
+type UpsertPersonnelFilePayload = Parameters<
+  typeof upsertUserPersonnelFile
+>[1];
 
 export default function UserLegajoPage() {
   const { id } = useParams<{ id: string }>();
+  const canView = useCan("legajo", "ver");
 
-  return (
-    <RoleGate allowIds={[2]} mode="render">
-      <LegajoContent id={id} />
-    </RoleGate>
-  );
+  if (!canView) {
+    return <AccessDenied403Page />;
+  }
+
+  return <LegajoContent id={id} />;
 }
 
-// 👇 Adaptador: API -> shape esperado por el form (Literal unions + defaults)
-function normalizePersonnelFile(pf: any): Partial<LegajoValues> {
-  const isEmployment = (s: any): s is LegajoValues["employmentStatus"] =>
-    typeof s === "string" && (EMPLOYMENT_STATUS as readonly string[]).includes(s);
+function normalizePersonnelFile(
+  pf: PersonnelFileDTO | null | undefined
+): Partial<LegajoValues> {
+  const isEmployment = (
+    value: unknown
+  ): value is LegajoValues["employmentStatus"] =>
+    typeof value === "string" &&
+    (EMPLOYMENT_STATUS as readonly string[]).includes(value);
 
-  const isContract = (s: any): s is NonNullable<LegajoValues["contractType"]> =>
-    typeof s === "string" && (CONTRACT_TYPES as readonly string[]).includes(s);
+  const isContract = (
+    value: unknown
+  ): value is NonNullable<LegajoValues["contractType"]> =>
+    typeof value === "string" &&
+    (CONTRACT_TYPES as readonly string[]).includes(value);
+
+  const parseEmployeeNumber = (
+    value: string | null | undefined
+  ): number | null | undefined => {
+    if (value === null) return null;
+    if (value === undefined || value === "") return undefined;
+
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  };
 
   return {
-    employeeNumber: pf?.employeeNumber ?? undefined,
+    employeeNumber: parseEmployeeNumber(pf?.employeeNumber),
     admissionDate: pf?.admissionDate ?? null,
     terminationDate: pf?.terminationDate ?? null,
-    employmentStatus: isEmployment(pf?.employmentStatus) ? pf.employmentStatus : "ACTIVO",
-    contractType: isContract(pf?.contractType) ? pf.contractType : undefined,
+    employmentStatus: isEmployment(pf?.employmentStatus)
+      ? pf.employmentStatus
+      : "ACTIVO",
+    contractType: isContract(pf?.contractType)
+      ? pf.contractType
+      : undefined,
     position: pf?.position ?? "",
     area: pf?.area ?? "",
     department: pf?.department ?? "",
@@ -51,47 +101,75 @@ function normalizePersonnelFile(pf: any): Partial<LegajoValues> {
 
 function LegajoContent({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState<string>("");
+  const [userName, setUserName] = useState("");
   const [initial, setInitial] = useState<Partial<LegajoValues> | null>(null);
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
-      setLoading(true);
-      const [u, f] = await Promise.all([getUser(id), getUserPersonnelFile(id)]);
-      if (!mounted) return;
+      try {
+        setLoading(true);
 
-      setUserName([u?.firstName, u?.lastName].filter(Boolean).join(" ") || u.userId);
+        const [u, f] = await Promise.all([
+          getUser(id),
+          getUserPersonnelFile(id),
+        ]);
 
-      // 👇 normalizamos lo que venga del API para que cumpla el tipo del form
-      const normalized: Partial<LegajoValues> =
-        f ? normalizePersonnelFile(f) : { employmentStatus: "ACTIVO" };
+        if (!mounted) return;
 
-      setInitial(normalized);
-      setLoading(false);
+        setUserName(
+          [u?.firstName, u?.lastName].filter(Boolean).join(" ") ||
+            u?.userId ||
+            ""
+        );
+
+        const personnelFile = f as PersonnelFileDTO | null | undefined;
+
+        const normalized: Partial<LegajoValues> = personnelFile
+          ? normalizePersonnelFile(personnelFile)
+          : { employmentStatus: "ACTIVO" };
+
+        setInitial(normalized);
+      } catch (error) {
+        console.error(error);
+        toast.error("No se pudo cargar el legajo");
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     })();
+
     return () => {
       mounted = false;
     };
   }, [id]);
 
-  if (loading || !initial) return <CenteredSpinner label="Cargando..." />;
+  if (loading || !initial) {
+    return <CenteredSpinner label="Cargando..." />;
+  }
 
   return (
     <div className="grid gap-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center">
+          <CardTitle className="flex items-center text-2xl">
             <FileUser className="mr-2" />
-            Cargar Legajo <Asterisk className="ml-4 w-4 h-4" /> {userName}
+            Cargar Legajo
+            <Asterisk className="ml-4 h-4 w-4" />
+            {userName}
           </CardTitle>
         </CardHeader>
+
         <CardContent>
           <LegajoForm
             defaultValues={initial}
             onSubmit={async (values) => {
-              // si tu cliente tipa distinto, casteá acá o alinea el tipo del cliente con LegajoValues
-              await upsertUserPersonnelFile(id, values as any);
+              await upsertUserPersonnelFile(
+                id,
+                values as UpsertPersonnelFilePayload
+              );
               toast.success("Guardado");
             }}
           />

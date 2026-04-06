@@ -23,14 +23,7 @@ const transporter = nodemailer.createTransport({ host, port, secure, auth: { use
 function buildHtml(name: string | undefined, resetLink: string, withLogoCid: boolean) {
   const safeName = name ?? "👋";
   const preheader = "Restablecé tu contraseña. Si no fuiste vos, ignorá este correo.";
-  const LOGO_SIZE = 44; // <— más grande
-
-  const logoImg = withLogoCid
-    ? `<img src="cid:brand-logo" alt="${BRAND_NAME}" width="${LOGO_SIZE}" height="${LOGO_SIZE}"
-            style="display:block;border:0;outline:none;text-decoration:none;">`
-    : `<img src="${BRAND_LOGO_URL}" alt="${BRAND_NAME}" width="${LOGO_SIZE}" height="${LOGO_SIZE}"
-            style="display:block;border:0;outline:none;text-decoration:none;">`;
-
+  
   return `<!DOCTYPE html>
 <html lang="es">
 <head>

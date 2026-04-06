@@ -1,32 +1,8 @@
 // src/app/layout.tsx
-import MobileUnsupported from "@/components/MobileUnsupported";
+import MobileUnsupported from "@/components/layout/MobileUnsupported";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Poppins } from "next/font/google";
-import { Playfair_Display } from "next/font/google";
-import { JetBrains_Mono } from "next/font/google"; // súper notoria
-import { Inter } from "next/font/google"; // usá la que quieras
-
-const appSans = Inter({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-app-sans",
-  display: "swap",
-});
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-sans", // usamos la misma variable que mapea Tailwind
-  display: "swap",
-});
 
 const poppins = Poppins({
   subsets: ["latin"],

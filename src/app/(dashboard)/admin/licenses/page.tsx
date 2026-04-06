@@ -3,10 +3,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList } from "lucide-react";
 import { AdminLeavesList } from "@/features/leaves/ui/AdminLeavesList";
-import { redirect } from "next/navigation";
+import { useCan } from "@/hooks/useCan";
+import AccessDenied403Page from "../../403/page";
 
 export default function AdminLicensesPage() {
-  redirect("/coming-soon");
+  const canAccess = useCan("licencias", "ver");
+
+  if (!canAccess) {
+    return <AccessDenied403Page />;
+  }
+
   return (
     <Card>
       <CardHeader>

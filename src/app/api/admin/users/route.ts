@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/authz";
+import { requireAuth, requirePermission } from "@/lib/server-auth";
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.res;
+  const loggedInUser = await requireAuth(req);
+  requirePermission(loggedInUser, "usuarios", "ver");
 
   const users = await prisma.usuario.findMany({
     select: {

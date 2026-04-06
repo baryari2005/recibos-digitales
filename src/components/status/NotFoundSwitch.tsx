@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusPage } from "@/components/status/StatusPage";
-import { CenteredSpinner } from "../CenteredSpinner";
+import Loading from "@/app/(dashboard)/loading";
 
 export function NotFoundSwitch2() {
   const router = useRouter();
@@ -20,10 +20,7 @@ export function NotFoundSwitch2() {
 
   if (!showPublic404) {
     return (
-    //   <div className="min-h-[60vh] flex items-center justify-center text-sm text-muted-foreground">
-    //     Redirigiendo…
-    //   </div>
-    <CenteredSpinner label="Redirigiendo..." />
+    <Loading/>
     );
   }
 

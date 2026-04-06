@@ -1,110 +1,241 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 import { getServerMe } from "@/lib/server-auth";
 import { cuilDashed } from "@/lib/cuil";
-import { createClient } from "@supabase/supabase-js";
-import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Row = Prisma.PayrollReceiptGetPayload<{
   select: {
-    id: true; cuil: true; period: true; periodDate: true;
-    filePath: true; fileUrl: true;
-    signed: true; signedDisagreement: true;
-    observations: true; createdAt: true; updatedAt: true;
+    id: true;
+    cuil: true;
+    period: true;
+    periodDate: true;
+    filePath: true;
+    fileUrl: true;
+    signed: true;
+    signedDisagreement: true;
+    observations: true;
+    createdAt: true;
+    updatedAt: true;
   };
 }>;
 
+type ServerMeUser = {
+  id?: string | null;
+  cuil?: string | null;
+  cuilNumero?: string | null;
+};
+
+type PayrollReceiptWithView = Row & {
+  viewUrl: string | null;
+  viewVersion: number | null;
+};
+
+function getSafeUser(value: unknown): ServerMeUser | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (!("user" in value)) {
+    return null;
+  }
+
+  const user = (value as { user?: unknown }).user;
+
+  if (!user || typeof user !== "object") {
+    return null;
+  }
+
+  const candidate = user as Record<string, unknown>;
+
+  return {
+    id: typeof candidate.id === "string" ? candidate.id : null,
+    cuil: typeof candidate.cuil === "string" ? candidate.cuil : null,
+    cuilNumero:
+      typeof candidate.cuilNumero === "string" ? candidate.cuilNumero : null,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
-    console.log("entre");
-
     const { searchParams } = new URL(req.url);
-    const wantSigned = String(searchParams.get("signed") ?? "false") === "true";
-    const limit = Math.max(1, Math.min(1000, Number(searchParams.get("limit") ?? 500)));
+    const wantSigned =
+      String(searchParams.get("signed") ?? "false") === "true";
+    const limit = Math.max(
+      1,
+      Math.min(1000, Number(searchParams.get("limit") ?? 500))
+    );
 
     const me = await getServerMe(req);
-    const userId = me?.user?.id;
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = getSafeUser(me);
+    const userId = user?.id;
 
-    const rawCuil = (me as any)?.user?.cuil || (me as any)?.user?.cuilNumero;
-    if (!rawCuil) return NextResponse.json({ error: "CUIL no configurado" }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rawCuil = user.cuil || user.cuilNumero;
+
+    if (!rawCuil) {
+      return NextResponse.json(
+        { error: "CUIL no configurado" },
+        { status: 400 }
+      );
+    }
+
     const cuil = cuilDashed(rawCuil);
 
-    // Traemos TODO y separamos por signed
     const rows: Row[] = await prisma.payrollReceipt.findMany({
       where: { cuil },
       select: {
-        id: true, cuil: true, period: true, periodDate: true,
-        filePath: true, fileUrl: true,
-        signed: true, signedDisagreement: true,
-        observations: true, createdAt: true, updatedAt: true,
+        id: true,
+        cuil: true,
+        period: true,
+        periodDate: true,
+        filePath: true,
+        fileUrl: true,
+        signed: true,
+        signedDisagreement: true,
+        observations: true,
+        createdAt: true,
+        updatedAt: true,
       },
       orderBy: [{ periodDate: "desc" }, { createdAt: "desc" }],
       take: limit,
     });
 
-    // Si no se piden signed URLs, devolvemos directo
     if (!wantSigned) {
       return NextResponse.json(
-        { ok: true, cuil, pending: rows.filter(r => !r.signed), signed: rows.filter(r => r.signed) },
-        { headers: { "Cache-Control": "no-store" } }
+        {
+          ok: true,
+          cuil,
+          pending: rows.filter((row) => !row.signed),
+          signed: rows.filter((row) => row.signed),
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        }
       );
     }
 
-    // ---- helpers para firma de URL y versión anti-cache
     const bucket = process.env.SUPABASE_BUCKET || "docs";
+
     const supa = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const isPublic = (u?: string | null) => !!u && u.includes("/storage/v1/object/public/");
-    const addBuster = (u: string, v: number | string) => `${u}${u.includes("?") ? "&" : "?"}v=${v}`;
+    const isPublic = (url?: string | null) =>
+      !!url && url.includes("/storage/v1/object/public/");
 
-    // Firmamos sólo las privadas
-    const needSigning = rows.filter(r => !isPublic(r.fileUrl));
+    const addBuster = (url: string, version: number | string) =>
+      `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
+
+    const needSigning = rows.filter((row) => !isPublic(row.fileUrl));
     const signedMap = new Map<string, string>();
-    for (const r of needSigning) {
-      const { data, error } = await supa.storage.from(bucket).createSignedUrl(r.filePath, 3600);
-      if (!error && data?.signedUrl) signedMap.set(r.id, data.signedUrl);
+
+    for (const row of needSigning) {
+      const { data, error } = await supa.storage
+        .from(bucket)
+        .createSignedUrl(row.filePath, 3600);
+
+      if (!error && data?.signedUrl) {
+        signedMap.set(row.id, data.signedUrl);
+      }
     }
 
-    // Para cada archivo, obtenemos su Last-Modified del Storage
-    async function getStorageVersion(r: Row): Promise<number> {
-      const baseUrl = isPublic(r.fileUrl) ? r.fileUrl! : (signedMap.get(r.id) || null);
-      if (!baseUrl) return 0;
+    async function getStorageVersion(row: Row): Promise<number> {
+      const baseUrl = isPublic(row.fileUrl)
+        ? row.fileUrl!
+        : (signedMap.get(row.id) ?? null);
+
+      if (!baseUrl) {
+        return 0;
+      }
+
       try {
-        const resp = await fetch(baseUrl, { method: "HEAD", cache: "no-store" });
-        const lm = resp.headers.get("last-modified");
-        return lm ? new Date(lm).getTime() : 0;
+        const response = await fetch(baseUrl, {
+          method: "HEAD",
+          cache: "no-store",
+        });
+
+        const lastModified = response.headers.get("last-modified");
+
+        return lastModified ? new Date(lastModified).getTime() : 0;
       } catch {
         return 0;
       }
     }
 
-    // Construimos cada item con URL y versión = max(DB.updatedAt, Storage.lastModified)
-    const withUrl = async (r: Row) => {
-      const baseUrl = isPublic(r.fileUrl) ? r.fileUrl! : (signedMap.get(r.id) || null);
-      if (!baseUrl) return { ...r, viewUrl: null, viewVersion: null as any };
+    const withUrl = async (row: Row): Promise<PayrollReceiptWithView> => {
+      const baseUrl = isPublic(row.fileUrl)
+        ? row.fileUrl!
+        : (signedMap.get(row.id) ?? null);
 
-      const verDb = new Date(r.updatedAt).getTime();
-      const verSt = await getStorageVersion(r);
-      const ver = Math.max(verDb, verSt, Date.now()); // siempre avanza
+      if (!baseUrl) {
+        return {
+          ...row,
+          viewUrl: null,
+          viewVersion: null,
+        };
+      }
 
-      return { ...r, viewUrl: addBuster(baseUrl, ver), viewVersion: ver };
+      const versionFromDb = new Date(row.updatedAt).getTime();
+      const versionFromStorage = await getStorageVersion(row);
+      const version = Math.max(versionFromDb, versionFromStorage, Date.now());
+
+      return {
+        ...row,
+        viewUrl: addBuster(baseUrl, version),
+        viewVersion: version,
+      };
     };
 
-    const pending = await Promise.all(rows.filter(r => !r.signed).map(withUrl));
-    const signed = await Promise.all(rows.filter(r =>  r.signed).map(withUrl));
+    const pending = await Promise.all(
+      rows.filter((row) => !row.signed).map(withUrl)
+    );
+
+    const signed = await Promise.all(
+      rows.filter((row) => row.signed).map(withUrl)
+    );
 
     return NextResponse.json(
-      { ok: true, cuil, pending, signed },
-      { headers: { "Cache-Control": "no-store" } }
+      {
+        ok: true,
+        cuil,
+        pending,
+        signed,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
     );
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message || "Error",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unexpected error",
+      },
+      { status: 500 }
+    );
   }
 }

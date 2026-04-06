@@ -30,7 +30,17 @@ export async function GET(req: NextRequest) {
       data.map(h => ({ date: h.date, name: h.localName || h.name }))
     );
 
-  } catch (e: any) {
-    return NextResponse.json({ error: "upstream_error", message: String(e?.message ?? e) }, { status: 502 });
-  }
+  } 
+  
+   catch (error: unknown) {
+    if (error instanceof Error) {      
+      if (error?.message === "UNAUTHORIZED") {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json({ error: "upstream_error", message: String(error?.message ?? error) }, { status: 502 });
+    }    
+  }  
 }

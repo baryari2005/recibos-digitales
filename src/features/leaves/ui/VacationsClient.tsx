@@ -11,7 +11,7 @@ export function VacationsClient() {
   const [open, setOpen] = useState(false);
 
   if (isLoading) {
-    return <p>Cargando...</p>;
+    return <p>Cargando6...</p>;
   }
 
   return (

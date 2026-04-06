@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ResetPasswordGate } from "@/components/auth/ResetPasswordGate"; // asumimos export nombrado
+import { ResetPasswordGate } from "@/features/auth/components/ResetPasswordGate"; // asumimos export nombrado
 
 export const metadata: Metadata = { title: "Restablecer contraseña" };
 export const dynamic = "force-dynamic";
