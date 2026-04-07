@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FileSearch2 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -13,10 +14,21 @@ import { ReceiptsFilters } from "../../../../features/payroll/receipts/component
 import { ReceiptsSummary } from "../../../../features/payroll/receipts/components/ReceiptsSummary";
 import { ReceiptsGroupedList } from "../../../../features/payroll/receipts/components/ReceiptsGroupedList";
 import { usePayrollReceiptsAdmin } from "../../../../features/payroll/receipts/hooks/usePayrollReceiptsAdmin";
+import { PayrollPdfViewerDialog } from "../../../../features/receipts/components/PayrollPdfViewerDialog";
 import AccessDenied403Page from "../../403/page";
 
 export default function PayrollReceiptsAdminPage() {
   const canAccess = useCan("recibos", "seguimiento");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    title: string;
+    filePath: string | null;
+    viewerUrl: string | null;
+  }>({
+    title: "PDF de recibo",
+    filePath: null,
+    viewerUrl: null,
+  });
 
   const {
     q,
@@ -78,9 +90,25 @@ export default function PayrollReceiptsAdminPage() {
             loading={loading}
             openCuil={openCuil}
             onToggleGroup={toggleGroup}
+            onOpenReceipt={({ title, filePath, viewerUrl }) => {
+              setSelectedReceipt({
+                title,
+                filePath,
+                viewerUrl: viewerUrl ?? null,
+              });
+              setPreviewOpen(true);
+            }}
           />
         </CardContent>
       </Card>
+
+      <PayrollPdfViewerDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        title={selectedReceipt.title}
+        filePath={selectedReceipt.filePath}
+        viewerUrl={selectedReceipt.viewerUrl}
+      />
     </div>
   );
 }

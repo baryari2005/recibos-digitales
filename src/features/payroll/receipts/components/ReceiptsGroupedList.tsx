@@ -1,16 +1,22 @@
 "use client";
 
-import { IdCard, LinkIcon, Loader2, User } from "lucide-react";
+import { Eye, IdCard, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ApiGroup } from "../types/types";
 import { ReceiptStatusBadge } from "./ReceiptStatusBadge";
 import { LoadingInTable } from "@/components/feedback/CenteredSpinner";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   groups: ApiGroup[];
   loading: boolean;
   openCuil: Record<string, boolean>;
   onToggleGroup: (cuil: string) => void;
+  onOpenReceipt: (params: {
+    title: string;
+    filePath: string;
+    viewerUrl?: string | null;
+  }) => void;
 };
 
 export function ReceiptsGroupedList({
@@ -18,6 +24,7 @@ export function ReceiptsGroupedList({
   loading,
   openCuil,
   onToggleGroup,
+  onOpenReceipt,
 }: Props) {
   return (
     <div className="rounded border">
@@ -79,15 +86,21 @@ export function ReceiptsGroupedList({
                             </td>
                             <td className="p-2">{r.observations ?? "-"}</td>
                             <td className="p-2">
-                              <a
-                                href={r.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center text-[#008C93] hover:underline"
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-auto px-0 text-[#008C93] hover:bg-transparent hover:text-[#007381] hover:underline"
+                                onClick={() =>
+                                  onOpenReceipt({
+                                    title: `${fullName} - ${r.period}`,
+                                    filePath: r.filePath,
+                                    viewerUrl: r.fileUrl,
+                                  })
+                                }
                               >
-                                <LinkIcon className="h-4 w-4 mr-1" />
+                                <Eye className="mr-1 h-4 w-4" />
                                 Ver PDF
-                              </a>
+                              </Button>
                             </td>
                           </tr>
                         ))}

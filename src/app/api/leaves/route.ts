@@ -3,8 +3,10 @@ import { prisma } from "@/lib/db";
 import { LeaveRepository } from "@/features/leaves/infrastructure/leave.prisma-repository";
 import { CreateLeaveUseCase } from "@/features/leaves/application/create-leave.usecase";
 import { getServerMe, requireAuth } from "@/lib/server-auth";
-import { LeaveStatus, LeaveType, Prisma } from "@prisma/client";
+import { LeaveStatus, Prisma } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
+
+const VACATION_TYPE_CODE = "VACACIONES";
 
 type AttachmentInput = {
   fileName: string;
@@ -40,20 +42,25 @@ export async function GET(req: NextRequest) {
     const q = (searchParams.get("q") ?? "").toUpperCase();
 
     const statusMatches = q ? enumMatches(LeaveStatus, q) : [];
-    const typeMatches = q ? enumMatches(LeaveType, q) : [];
 
     const andFilters: Prisma.LeaveRequestWhereInput[] = [{ userId: user.id }];
 
     if (typeParam === "VACACIONES") {
       andFilters.push({
-        type: LeaveType.VACACIONES,
+        typeCatalog: {
+          is: {
+            code: VACATION_TYPE_CODE,
+          },
+        },
       });
     }
 
     if (typeParam === "OTHER") {
       andFilters.push({
-        type: {
-          not: LeaveType.VACACIONES,
+        typeCatalog: {
+          isNot: {
+            code: VACATION_TYPE_CODE,
+          },
         },
       });
     }
@@ -61,7 +68,16 @@ export async function GET(req: NextRequest) {
     if (q) {
       const orFilters: Prisma.LeaveRequestWhereInput[] = [
         ...(statusMatches.length ? [{ status: { in: statusMatches } }] : []),
-        ...(typeMatches.length ? [{ type: { in: typeMatches } }] : []),
+        {
+          typeCatalog: {
+            is: {
+              OR: [
+                { code: { contains: q, mode: "insensitive" } },
+                { label: { contains: q, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
       ];
 
       if (orFilters.length) {
@@ -83,6 +99,12 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         include: {
           attachments: true,
+          typeCatalog: {
+            select: {
+              code: true,
+              label: true,
+            },
+          },
         },
       }),
       prisma.leaveRequest.count({ where }),
@@ -91,6 +113,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       data: items.map((item) => ({
         ...item,
+        type: item.typeCatalog.label,
+        typeCode: item.typeCatalog.code,
         attachments: item.attachments ?? [],
       })),
       meta: {

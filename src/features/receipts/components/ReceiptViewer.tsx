@@ -1,9 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ExternalLink, File, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import type { Receipt } from "../types/types";
 import { useCan } from "@/hooks/useCan";
+import { PayrollPdfViewerContent } from "./PayrollPdfViewerContent";
 
 function getReceiptLabel(period: string) {
   const p = (period || "").toUpperCase();
@@ -28,75 +29,52 @@ export function ReceiptViewer({
   onSign: (disagree: boolean) => void;
   signing: boolean;
 }) {
-  const key = selected ? `${selected.id}:${selected.viewVersion ?? new Date(selected.updatedAt).getTime()}` : "none";
   const src = selected?.viewUrl ?? undefined;
-
-  const canSign = useCan("recibos", "firmar"); 
+  const canSign = useCan("recibos", "firmar");
 
   return (
-    <div className="p-0 h-full flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b">
-        <div>
-          <div className="text-sm-plus font-semibold flex items-center">
-            <File className="w-4 h-4 mr-2"/>
-            {selected ? `${getReceiptLabel(selected.period)} — ${selected.period}` : "No hay documentos seleccionados"}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {selected?.viewUrl && (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-end gap-2 border-b bg-white p-3">
+        {!selected?.signed && selected && canSign && (
+          <>
             <Button
               size="sm"
-              variant="outline"
-              className="h-11 rounded"
-              onClick={() => window.open(selected.viewUrl!, "_blank")}
+              className="h-11 rounded bg-[#008C93] hover:bg-[#007381]"
+              onClick={() => onSign(false)}
+              disabled={signing}
             >
-              <ExternalLink className="w-4 h-4 mr-1" /> Abrir en pestaña
+              {signing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Firmar Documento
             </Button>
-          )}
-
-          {!selected?.signed && selected && canSign && (
-            <>
-              <Button
-                size="sm"
-                className="bg-[#008C93] hover:bg-[#007381] h-11 rounded"
-                onClick={() => onSign(false)}
-                disabled={signing}
-              >
-                {signing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Firmar Documento
-              </Button>
-              <Button
-                size="sm"
-                className="h-11 rounded bg-[#7F0000] hover:bg-[#630000]"
-                onClick={() => onSign(true)}
-                disabled={signing}
-              >
-                <AlertTriangle className="w-4 h-4 mr-1" /> Firmar no conforme
-              </Button>
-            </>
-          )}
-        </div>
+            <Button
+              size="sm"
+              className="h-11 rounded bg-[#7F0000] hover:bg-[#630000]"
+              onClick={() => onSign(true)}
+              disabled={signing}
+            >
+              <AlertTriangle className="mr-1 h-4 w-4" />
+              Firmar no conforme
+            </Button>
+          </>
+        )}
       </div>
 
-      <div className="flex-1 bg-muted/20">
-        {src ? (
-          <iframe
-            key={key}
-            src={src}
-            className="w-full h-full"
-            allow="fullscreen"
-            allowFullScreen
-          />
-        ) : selected ? (
-          <div className="h-full grid place-items-center text-sm text-muted-foreground p-6">
-            No se pudo generar la URL de vista para este documento.
-          </div>
-        ) : (
-          <div className="h-full grid place-items-center text-sm text-muted-foreground p-6">
-            Seleccioná un documento de la lista.
-          </div>
-        )}
+      <div className="min-h-0 flex-1">
+        <PayrollPdfViewerContent
+          title={
+            selected
+              ? `${getReceiptLabel(selected.period)} - ${selected.period}`
+              : "No hay documentos seleccionados"
+          }
+          viewerUrl={src}
+          emptyMessage={
+            selected
+              ? "No se pudo generar la URL de vista para este documento."
+              : "Seleccioná un documento de la lista."
+          }
+        />
       </div>
     </div>
   );

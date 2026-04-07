@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
-import { LeaveType, VacationBalance } from "@prisma/client";
 import { CreateLeaveDTO } from "./dto";
 import { LeaveRepository } from "../infrastructure/leave.prisma-repository";
+
+const VACATION_TYPE_CODE = "VACACIONES";
 
 export class CreateLeaveUseCase {
   constructor(private readonly repo: LeaveRepository) {}
@@ -16,7 +17,7 @@ export class CreateLeaveUseCase {
     }[];
   }) {
 
-    if (dto.type === LeaveType.VACACIONES) {
+    if (dto.type === VACATION_TYPE_CODE) {
       const daysRequested = dto.daysCount;
       const year = new Date(dto.startYmd).getFullYear();
 

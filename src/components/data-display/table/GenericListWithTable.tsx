@@ -214,8 +214,10 @@ export function GenericListWithTable<T>({
 
         setData(items);
 
-        const pages =
-          pageCount ?? Math.max(1, Math.ceil((total || 0) / pageSize));
+        const pages = Math.max(
+          1,
+          pageCount ?? Math.ceil((total || 0) / pageSize)
+        );
 
         setTotalPages(pages);
       } catch (error: unknown) {

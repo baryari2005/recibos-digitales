@@ -1,24 +1,30 @@
 "use client";
 
 import useSWR from "swr";
-import axios from "axios";
+import { axiosInstance } from "@/lib/axios";
 
 export type LeaveTypeItem = {
   code: string;
   label: string;
 };
 
+type LeaveTypesResponse = {
+  data?: LeaveTypeItem[];
+};
+
 const fetcher = (url: string) =>
-  axios.get(url).then((r) => r.data);
+  axiosInstance
+    .get<LeaveTypesResponse>(url)
+    .then((response) => response.data);
 
 export function useLeaveTypes() {
-  const { data, isLoading } = useSWR<LeaveTypeItem[]>(
-    "/api/leave-types",
+  const { data, isLoading } = useSWR(
+    "/leave-types?activeOnly=1&pageSize=100",
     fetcher
   );
 
   return {
-    types: data ?? [],
+    types: data?.data ?? [],
     isLoading,
   };
 }

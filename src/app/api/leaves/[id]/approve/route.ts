@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { LeaveStatus, LeaveType, Prisma } from "@prisma/client";
+import { LeaveStatus, Prisma } from "@prisma/client";
 import { requireAuth, requirePermission } from "@/lib/server-auth";
+
+const VACATION_TYPE_CODE = "VACACIONES";
 
 export async function POST(
   req: NextRequest,
@@ -17,6 +19,13 @@ export async function POST(
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const leave = await tx.leaveRequest.findUnique({
         where: { id },
+        include: {
+          typeCatalog: {
+            select: {
+              code: true,
+            },
+          },
+        },
       });
 
       if (!leave) {
@@ -27,7 +36,7 @@ export async function POST(
         throw new Error("ALREADY_PROCESSED");
       }
 
-      if (leave.type === LeaveType.VACACIONES) {
+      if (leave.typeCatalog.code === VACATION_TYPE_CODE) {
         let remainingDays = leave.daysCount;
 
         const balances = await tx.vacationBalance.findMany({

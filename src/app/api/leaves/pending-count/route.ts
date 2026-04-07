@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, requirePermission } from "@/lib/server-auth";
-import { LeaveStatus, LeaveType, Prisma } from "@prisma/client";
+import { LeaveStatus, Prisma } from "@prisma/client";
+
+const VACATION_TYPE_CODE = "VACACIONES";
 
 const norm = (v?: string | null) => (v ?? "").trim().toUpperCase();
 
@@ -61,9 +63,17 @@ export async function GET(req: NextRequest) {
     }
 
     if (typeParam === "VACACIONES") {
-      where.type = LeaveType.VACACIONES;
+      where.typeCatalog = {
+        is: {
+          code: VACATION_TYPE_CODE,
+        },
+      };
     } else if (typeParam === "OTHER") {
-      where.type = { not: LeaveType.VACACIONES };
+      where.typeCatalog = {
+        isNot: {
+          code: VACATION_TYPE_CODE,
+        },
+      };
     }
 
     const count = await prisma.leaveRequest.count({ where });

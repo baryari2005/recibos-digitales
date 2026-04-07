@@ -42,7 +42,7 @@ export function GenericDataTable<T>({
   columns,
   sorting,
   onSortingChange,
-  searchPlaceholder = "Buscar…",
+  searchPlaceholder = "Buscar...",
 }: DataTableProps<T>) {
   const table = useReactTable<T>({
     data,
@@ -53,12 +53,16 @@ export function GenericDataTable<T>({
     getSortedRowModel: getSortedRowModel(),
   });
 
+  const safeTotalPages = Math.max(1, totalPages);
+  const safePage = Math.min(Math.max(1, page), safeTotalPages);
+  const hasResults = data.length > 0;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="relative w-full">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
 
@@ -71,14 +75,14 @@ export function GenericDataTable<T>({
 
           {loading && (
             <Loader2
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none"
-              aria-label="Buscando…"
+              className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+              aria-label="Buscando..."
             />
           )}
         </div>
       </div>
 
-      <div className="rounded-md border overflow-hidden">
+      <div className="overflow-hidden rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             {table.getHeaderGroups().map((hg) => (
@@ -88,7 +92,7 @@ export function GenericDataTable<T>({
                   const dir = h.column.getIsSorted();
 
                   return (
-                    <th key={h.id} className="p-3 text-left select-none">
+                    <th key={h.id} className="select-none p-3 text-left">
                       <button
                         type="button"
                         onClick={h.column.getToggleSortingHandler()}
@@ -119,11 +123,11 @@ export function GenericDataTable<T>({
             {loading ? (
               <tr>
                 <td
-                  className="p-3 flex items-center text-muted-foreground"
+                  className="flex items-center p-3 text-muted-foreground"
                   colSpan={columns.length}
                 >
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Cargando…
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cargando...
                 </td>
               </tr>
             ) : data.length === 0 ? (
@@ -150,29 +154,31 @@ export function GenericDataTable<T>({
         </table>
       </div>
 
-      <div className="flex items-center justify-between mt-1 text-sm">
+      <div className="mt-1 flex items-center justify-between text-sm">
         <div>
-          Página {page} de {totalPages}
+          {loading || hasResults
+            ? `Página ${safePage} de ${safeTotalPages}`
+            : "Sin resultados"}
         </div>
 
         <div className="flex items-center gap-2">
           <Button
-            className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer"
+            className="h-11 cursor-pointer rounded bg-[#008C93] hover:bg-[#007381]"
             size="sm"
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page <= 1 || loading}
+            onClick={() => onPageChange(Math.max(1, safePage - 1))}
+            disabled={safePage <= 1 || loading || !hasResults}
           >
-            <ArrowBigLeft className="w-4 h-4" />
+            <ArrowBigLeft className="h-4 w-4" />
             Anterior
           </Button>
 
           <Button
-            className="h-11 rounded bg-[#008C93] hover:bg-[#007381] cursor-pointer"
-            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            disabled={page >= totalPages || loading}
+            className="h-11 cursor-pointer rounded bg-[#008C93] hover:bg-[#007381]"
+            onClick={() => onPageChange(Math.min(safeTotalPages, safePage + 1))}
+            disabled={safePage >= safeTotalPages || loading || !hasResults}
           >
             Siguiente
-            <ArrowBigRight className="w-4 h-4" />
+            <ArrowBigRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -2,7 +2,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { DefaultArgs } from "@prisma/client/runtime/library";
 import bcrypt from "bcryptjs";
-import { seedLeaveTypes } from "./seed.leave-types";
+// import { seedLeaveTypes } from "./seed.leave-types";
 
 const prisma = new PrismaClient();
 
@@ -43,7 +43,7 @@ async function main() {
     include: { rol: true },
   });
 
-   await seedLeaveTypes(prisma);
+  //  await seedLeaveTypes(prisma);
    
 
   console.log("✅ Seed OK");

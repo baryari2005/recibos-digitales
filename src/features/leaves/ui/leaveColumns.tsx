@@ -63,7 +63,7 @@ export const leaveColumns = (
               mimeType: file.mimeType,
             })
           }
-          className="inline-flex items-center gap-2 text-sm text-[#008C93] underline"
+          className="inline-flex items-center gap-2 text-sm text-[#008C93] underline cursor-pointer"
           title={file.fileName}
         >
           <Paperclip className="h-4 w-4" />

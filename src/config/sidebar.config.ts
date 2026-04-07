@@ -10,6 +10,7 @@ import {
     Import,    
     ShieldCheck,
     FileUp,
+    CalendarCog,
 } from "lucide-react";
 import { ComponentType, SVGProps } from "react";
 
@@ -103,6 +104,13 @@ export const SIDEBAR_CONFIG: SidebarItemConfig[] = [
         href: "/vacation-balance",
         icon: CalendarDays,
         permission: { modulo: "vacaciones", accion: "asignar" },
+    },
+    {
+        section: "Gestión de Licencias",
+        title: "Tipos de licencias",
+        href: "/leave-types",
+        icon: CalendarCog,
+        permission: { modulo: "tipo_licencia", accion: "ver"},
     },
     {
         section: "Aprobaciones",

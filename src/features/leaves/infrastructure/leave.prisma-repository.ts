@@ -2,8 +2,10 @@ import {
   Prisma,
   PrismaClient,
   LeaveStatus,
-  LeaveType,
 } from "@prisma/client";
+import { normalizeLeaveTypeCode } from "@/features/leave-types/lib/leave-type.helpers";
+
+const VACATION_TYPE_CODE = "VACACIONES";
 
 function enumMatches<T extends Record<string, string>>(
   enm: T,
@@ -21,7 +23,7 @@ export class LeaveRepository {
 
   create(data: {
     userId: string;
-    type: LeaveType;
+    type: string;
     startYmd: string;
     endYmd: string;
     daysCount: number;
@@ -34,22 +36,34 @@ export class LeaveRepository {
       size?: number;
     }[];
   }) {
-    return this.prisma.leaveRequest.create({
-      data: {
-        userId: data.userId,
-        type: data.type,
-        startYmd: data.startYmd,
-        endYmd: data.endYmd,
-        daysCount: data.daysCount,
-        note: data.note?.trim() || null,
-        attachments: data.attachments?.length
-          ? {
-              create: data.attachments,
-            }
-          : undefined,
+    const normalizedTypeCode = normalizeLeaveTypeCode(data.type);
+    const createData: Prisma.LeaveRequestCreateInput = {
+      user: {
+        connect: {
+          id: data.userId,
+        },
       },
+      typeCatalog: {
+        connect: {
+          code: normalizedTypeCode,
+        },
+      },
+      startYmd: data.startYmd,
+      endYmd: data.endYmd,
+      daysCount: data.daysCount,
+      note: data.note?.trim() || null,
+      attachments: data.attachments?.length
+        ? {
+            create: data.attachments,
+          }
+        : undefined,
+    };
+
+    return this.prisma.leaveRequest.create({
+      data: createData,
       include: {
         attachments: true,
+        typeCatalog: true,
       },
     });
   }
@@ -58,7 +72,11 @@ export class LeaveRepository {
     return this.prisma.leaveRequest.findFirst({
       where: {
         userId,
-        type: LeaveType.VACACIONES,
+        typeCatalog: {
+          is: {
+            code: VACATION_TYPE_CODE,
+          },
+        },
         status: LeaveStatus.PENDIENTE,
       },
       orderBy: { createdAt: "desc" },
@@ -75,7 +93,11 @@ export class LeaveRepository {
     return this.prisma.leaveRequest.findFirst({
       where: {
         userId,
-        type: LeaveType.VACACIONES,
+        typeCatalog: {
+          is: {
+            code: VACATION_TYPE_CODE,
+          },
+        },
         status: {
           in: [LeaveStatus.PENDIENTE, LeaveStatus.APROBADO],
         },
@@ -99,15 +121,22 @@ export class LeaveRepository {
     };
 
     if (type === "VACACIONES") {
-      where.type = LeaveType.VACACIONES;
+      where.typeCatalog = {
+        is: {
+          code: VACATION_TYPE_CODE,
+        },
+      };
     }
 
     if (type === "OTHER") {
-      where.type = { not: LeaveType.VACACIONES };
+      where.typeCatalog = {
+        isNot: {
+          code: VACATION_TYPE_CODE,
+        },
+      };
     }
 
     if (q) {
-      const typeMatches = enumMatches(LeaveType, q);
       const statusMatches = enumMatches(LeaveStatus, q);
 
       const users = await this.prisma.usuario.findMany({
@@ -125,7 +154,16 @@ export class LeaveRepository {
       where.OR = [
         ...(userIds.length > 0 ? [{ userId: { in: userIds } }] : []),
         { note: { contains: q, mode: "insensitive" } },
-        ...(typeMatches.length > 0 ? [{ type: { in: typeMatches } }] : []),
+        {
+          typeCatalog: {
+            is: {
+              OR: [
+                { code: { contains: q, mode: "insensitive" } },
+                { label: { contains: q, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
         ...(statusMatches.length > 0
           ? [{ status: { in: statusMatches } }]
           : []),
@@ -136,6 +174,12 @@ export class LeaveRepository {
       this.prisma.leaveRequest.findMany({
         where,
         include: {
+          typeCatalog: {
+            select: {
+              code: true,
+              label: true,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -165,7 +209,14 @@ export class LeaveRepository {
       this.prisma.leaveRequest.count({ where }),
     ]);
 
-    return { items, total };
+    return {
+      items: items.map((item) => ({
+        ...item,
+        type: item.typeCatalog.label,
+        typeCode: item.typeCatalog.code,
+      })),
+      total,
+    };
   }
 
   findByUser(userId: string) {
@@ -173,6 +224,7 @@ export class LeaveRepository {
       where: { userId },
       include: {
         attachments: true,
+        typeCatalog: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -183,6 +235,7 @@ export class LeaveRepository {
       where: { id },
       include: {
         attachments: true,
+        typeCatalog: true,
       },
     });
   }

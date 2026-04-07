@@ -1,7 +1,7 @@
-import { LeaveType, LeaveStatus } from "@prisma/client";
+import { LeaveStatus } from "@prisma/client";
 
 export type CreateLeaveDTO = {
-  type: LeaveType;
+  type: string;
   startYmd: string;
   endYmd: string;
   daysCount: number;
@@ -10,7 +10,7 @@ export type CreateLeaveDTO = {
 
 export type LeaveListItemDTO = {
   id: string;
-  type: LeaveType;
+  type: string;
   status: LeaveStatus;
   startYmd: string;
   endYmd: string;

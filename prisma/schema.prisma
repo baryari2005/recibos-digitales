@@ -115,11 +115,10 @@ model PayrollReceipt {
 }
 
 model LeaveRequest {
-  id     String   @id @default(cuid())
+  id     String  @id @default(cuid())
   userId String
-  user   Usuario? @relation(fields: [userId], references: [id])
+  user   Usuario @relation(fields: [userId], references: [id])
 
-  type       LeaveType
   status     LeaveStatus @default(PENDIENTE)
   startYmd   String
   endYmd     String
@@ -130,8 +129,8 @@ model LeaveRequest {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  typeCatalogId Int?
-  typeCatalog   LeaveTypeCatalog? @relation(fields: [typeCatalogId], references: [id])
+  typeCatalogId Int
+  typeCatalog   LeaveTypeCatalog @relation(fields: [typeCatalogId], references: [id])
 
   attachments LeaveAttachment[]
 
@@ -159,14 +158,15 @@ model LeaveAttachment {
 }
 
 model LeaveTypeCatalog {
-  id        Int            @id @default(autoincrement())
-  code      LeaveType      @unique
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
   label     String
   colorHex  String?
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  requests  LeaveRequest[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requests LeaveRequest[]
 }
 
 enum Genero {
@@ -259,20 +259,6 @@ enum TipoDocumento {
   LE
   LC
   CI
-}
-
-enum LeaveType {
-  VACACIONES
-  ENFERMEDAD
-  CASAMIENTO
-  ESTUDIOS
-  EXCEDENCIA
-  FALLECIMIENTO
-  CON_GOCE
-  SIN_GOCE
-  MATERNIDAD
-  NACIMIENTO
-  SEMANA_EXTRA
 }
 
 enum LeaveStatus {
