@@ -36,28 +36,41 @@ export function PayrollPdfViewerContent({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <Button
-            asChild
-            variant="outline"
-            className="h-10 rounded"
-            disabled={!viewerUrl || loading}
-          >
-            <a href={viewerUrl ?? "#"} target="_blank" rel="noreferrer">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              {openLabel}
-            </a>
-          </Button>
+          {viewerUrl && !loading ? (
+            <>
+              <Button asChild variant="outline" className="h-10 rounded">
+                <a href={viewerUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {openLabel}
+                </a>
+              </Button>
 
-          <Button
-            asChild
-            className="h-10 rounded bg-[#008C93] hover:bg-[#007381]"
-            disabled={!viewerUrl || loading}
-          >
-            <a href={viewerUrl ?? "#"} target="_blank" rel="noreferrer" download>
-              <Download className="mr-2 h-4 w-4" />
-              Descargar
-            </a>
-          </Button>
+              <Button
+                asChild
+                className="h-10 rounded bg-[#008C93] hover:bg-[#007381]"
+              >
+                <a href={viewerUrl} target="_blank" rel="noreferrer" download>
+                  <Download className="mr-2 h-4 w-4" />
+                  Descargar
+                </a>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" className="h-10 rounded" disabled>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                {openLabel}
+              </Button>
+
+              <Button
+                className="h-10 rounded bg-[#008C93] hover:bg-[#007381]"
+                disabled
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Descargar
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

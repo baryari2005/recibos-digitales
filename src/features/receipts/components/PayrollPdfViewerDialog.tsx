@@ -17,6 +17,10 @@ type SignedUrlResponse = {
   signedUrl?: string;
 };
 
+function isPublicStorageUrl(url?: string | null) {
+  return Boolean(url?.includes("/storage/v1/object/public/"));
+}
+
 export function PayrollPdfViewerDialog({
   open,
   onOpenChange,
@@ -24,25 +28,33 @@ export function PayrollPdfViewerDialog({
   filePath,
   viewerUrl,
 }: Props) {
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(viewerUrl ?? null);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(
+    viewerUrl ?? null
+  );
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setLoading(false);
+      return;
+    }
 
-    if (viewerUrl) {
+    if (viewerUrl && isPublicStorageUrl(viewerUrl)) {
       setResolvedUrl(viewerUrl);
       return;
     }
 
     if (!filePath) {
-      setResolvedUrl(null);
+      setResolvedUrl(viewerUrl ?? null);
       return;
     }
+
+    let cancelled = false;
 
     const fetchSignedUrl = async () => {
       try {
         setLoading(true);
+
         const { data } = await axiosInstance.get<SignedUrlResponse>(
           "/admin/storage/sign",
           {
@@ -50,16 +62,27 @@ export function PayrollPdfViewerDialog({
           }
         );
 
-        setResolvedUrl(data.signedUrl ?? null);
+        if (!cancelled) {
+          setResolvedUrl(data.signedUrl ?? null);
+        }
       } catch (error) {
         console.error("No se pudo obtener la URL firmada del PDF:", error);
-        setResolvedUrl(null);
+
+        if (!cancelled) {
+          setResolvedUrl(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchSignedUrl();
+
+    return () => {
+      cancelled = true;
+    };
   }, [filePath, open, viewerUrl]);
 
   return (
