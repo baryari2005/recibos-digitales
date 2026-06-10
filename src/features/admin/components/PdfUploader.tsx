@@ -10,6 +10,14 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -22,6 +30,9 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/stores/auth";
 import { ReceiptType, SplitStats } from "../types/types";
+
+const BLOCK_PAYROLL_UPLOAD_TEMPORARILY =
+  process.env.NEXT_PUBLIC_BLOCK_PAYROLL_UPLOAD === "true";
 
 type UploadedFileResponse = {
   url: string;
@@ -66,6 +77,7 @@ export default function PdfUploader({
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showBlockedDialog, setShowBlockedDialog] = useState(false);
   const [period, setPeriod] = useState<string>(
     new Date().toISOString().slice(0, 7)
   );
@@ -114,6 +126,11 @@ export default function PdfUploader({
 
   const upload = async () => {
     if (!file) return;
+
+    if (BLOCK_PAYROLL_UPLOAD_TEMPORARILY) {
+      setShowBlockedDialog(true);
+      return;
+    }
 
     if (!token) {
       toast.error("No tenes sesion iniciada.");
@@ -199,6 +216,35 @@ export default function PdfUploader({
 
   return (
     <div className="space-y-4">
+      <Dialog open={showBlockedDialog} onOpenChange={setShowBlockedDialog}>
+        <DialogContent className="sm:max-w-md rounded-sm p-0 overflow-hidden">
+          <DialogHeader className="border-b px-6 py-5 text-left">
+            <DialogTitle className="text-base font-semibold">
+              Error al procesar
+            </DialogTitle>
+            <DialogDescription className="pt-3 text-sm text-slate-700">
+              Este archivo no puede ser cargado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="px-6 py-5 text-sm text-slate-600">
+            {/* Intenta nuevamente mas tarde o vuelve a habilitar la carga desde el
+            flag temporal cuando corresponda. */}
+            Intenta nuevamente mas tarde o contacta al soporte para mas información.
+          </div>
+
+          <DialogFooter className="border-t bg-slate-50 px-6 py-4">
+            <Button
+              type="button"
+              className="h-11 rounded bg-[#008C93] px-6 hover:bg-[#007381]"
+              onClick={() => setShowBlockedDialog(false)}
+            >
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle className="flex items-center text-2xl">
